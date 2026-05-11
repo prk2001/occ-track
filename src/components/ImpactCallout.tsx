@@ -19,13 +19,13 @@ interface ImpactCalloutProps {
 }
 
 function defaultReframe(count: number): string {
-  if (count === 0) return 'Every box is a child waiting to be reached.';
-  if (count === 1) return 'One child. One Christmas. One story changed.';
-  if (count < 50) return `${count} children will know they're loved this Christmas.`;
-  if (count < 1000) return `${count} children — each one with a story Jesus came to write.`;
-  if (count < 100_000) return `${count.toLocaleString()} smiles already wrapped for Christmas morning.`;
-  if (count < 1_000_000) return `${count.toLocaleString()} kids in 170+ countries will hear, “Jesus loves you.”`;
-  return `${count.toLocaleString()} children — that's a whole generation Christmas is reaching.`;
+  if (count === 0) return 'Every box is a Gospel presentation waiting to happen.';
+  if (count === 1) return 'One box. One child. One presentation of the Gospel.';
+  if (count < 50) return `${count} individual presentations of the Gospel, wrapped and ready.`;
+  if (count < 1000) return `${count} children will hear the Gospel through a shoebox — each one with their own story.`;
+  if (count < 100_000) return `${count.toLocaleString()} individual presentations of the Gospel, packed for Christmas morning.`;
+  if (count < 1_000_000) return `${count.toLocaleString()} kids in 170+ countries will hear about Jesus through a shoebox.`;
+  return `${count.toLocaleString()} Gospel presentations — a whole generation reached, one box at a time.`;
 }
 
 export default function ImpactCallout({

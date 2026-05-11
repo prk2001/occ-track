@@ -12,13 +12,16 @@ import ChristmasStar from '@/components/illustrations/ChristmasStar';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import {
   COLLECTION_DAYS,
-  VOLUNTEER_ROLE_CONFIG,
   COLLECTION_WEEK_START,
   COLLECTION_WEEK_END,
 } from '@/data/mockData';
-import type { VolunteerRole } from '@/data/mockData';
 
-type Step = 'intro' | 'contact' | 'days' | 'roles' | 'details' | 'done';
+// Note on roles: in real OCC practice, volunteers sign up just to *serve* —
+// the Central Drop-off Leader assigns specific roles (Greeter, Counter,
+// Cartonizer, etc.) on the day based on need and experience. Most
+// volunteers never get OCC Track app access; only Greeters use the app
+// at the welcome table for check-ins.
+type Step = 'intro' | 'contact' | 'days' | 'details' | 'done';
 type ShirtSize = 'S' | 'M' | 'L' | 'XL' | 'XXL';
 type HoursPref = 'morning' | 'afternoon' | 'evening' | 'any';
 
@@ -29,8 +32,6 @@ interface SignupDraft {
   zip: string;
   days: string[];
   hoursPref: HoursPref;
-  roles: VolunteerRole[];
-  anyRole: boolean;
   firstTime: boolean | null;
   shirtSize: ShirtSize | '';
   emergencyName: string;
@@ -47,7 +48,6 @@ interface StoredSignup extends SignupDraft {
 const EMPTY_DRAFT: SignupDraft = {
   name: '', email: '', phone: '', zip: '',
   days: [], hoursPref: 'any',
-  roles: [], anyRole: false,
   firstTime: null, shirtSize: '',
   emergencyName: '', emergencyPhone: '', notes: '',
   agree: false,
@@ -89,7 +89,6 @@ export default function VolunteerSignup() {
   // Step gating
   const contactOk = draft.name.trim().length > 1 && /.+@.+\..+/.test(draft.email) && draft.phone.trim().length >= 7;
   const daysOk = draft.days.length > 0;
-  const rolesOk = draft.anyRole || draft.roles.length > 0;
   const finalOk = draft.agree;
 
   return (
@@ -138,18 +137,8 @@ export default function VolunteerSignup() {
                 draft={draft}
                 onPatch={patch}
                 onBack={() => setStep('contact')}
-                onNext={() => setStep('roles')}
-                ok={daysOk}
-              />
-            )}
-            {step === 'roles' && (
-              <RolesStep
-                key="roles"
-                draft={draft}
-                onPatch={patch}
-                onBack={() => setStep('days')}
                 onNext={() => setStep('details')}
-                ok={rolesOk}
+                ok={daysOk}
               />
             )}
             {step === 'details' && (
@@ -157,7 +146,7 @@ export default function VolunteerSignup() {
                 key="details"
                 draft={draft}
                 onPatch={patch}
-                onBack={() => setStep('roles')}
+                onBack={() => setStep('days')}
                 onSubmit={submit}
                 ok={finalOk}
               />
@@ -182,15 +171,15 @@ export default function VolunteerSignup() {
 
 // ─── Step progress bar ────────────────────────────────────────────────────────
 function StepBar({ step }: { step: Step }) {
-  const stepIndex = { intro: 0, contact: 1, days: 2, roles: 3, details: 4, done: 5 }[step];
+  const stepIndex = { intro: 0, contact: 1, days: 2, details: 3, done: 4 }[step];
   return (
     <div className="mb-6 space-y-2">
       <div className="flex items-center justify-between text-[10px] font-semibold uppercase tracking-[0.18em] text-ink-light">
-        <span>Step {stepIndex} of 4</span>
-        <span>{['', 'About you', 'Your days', 'Your roles', 'A few more things'][stepIndex]}</span>
+        <span>Step {stepIndex} of 3</span>
+        <span>{['', 'About you', 'Your days', 'A few more things'][stepIndex]}</span>
       </div>
       <div className="flex gap-1.5">
-        {[1, 2, 3, 4].map((i) => (
+        {[1, 2, 3].map((i) => (
           <span
             key={i}
             className={`h-1 flex-1 rounded-full transition-colors ${
@@ -400,88 +389,7 @@ function DaysStep({
   );
 }
 
-// ─── Step 3: Roles ───────────────────────────────────────────────────────────
-function RolesStep({
-  draft, onPatch, onBack, onNext, ok,
-}: {
-  draft: SignupDraft;
-  onPatch: (p: Partial<SignupDraft>) => void;
-  onBack: () => void;
-  onNext: () => void;
-  ok: boolean;
-}) {
-  function toggleRole(r: VolunteerRole) {
-    onPatch({
-      roles: draft.roles.includes(r) ? draft.roles.filter((x) => x !== r) : [...draft.roles, r],
-      anyRole: false,
-    });
-  }
-  function toggleAnyRole() {
-    onPatch({ anyRole: !draft.anyRole, roles: [] });
-  }
-
-  return (
-    <StepShell title="What sounds like you?" italic="Pick one or several. There's no wrong answer." onBack={onBack}>
-      <button
-        onClick={toggleAnyRole}
-        className={`w-full flex items-center gap-3 rounded-2xl border-2 px-5 py-4 transition-all ${
-          draft.anyRole
-            ? 'bg-sp-red border-sp-red text-white shadow-card'
-            : 'bg-bg-card border-border-custom hover:border-sp-red/50'
-        }`}
-      >
-        <Sparkles className={`w-5 h-5 ${draft.anyRole ? 'text-white' : 'text-sp-red'}`} />
-        <div className="flex-1 text-left">
-          <p className="font-display text-base font-medium leading-tight">Wherever I&apos;m needed</p>
-          <p className={`text-[11px] mt-0.5 ${draft.anyRole ? 'text-white/85' : 'text-ink-light'}`}>
-            We&apos;ll put you where the gap is on the day
-          </p>
-        </div>
-        {draft.anyRole && <CheckCircle2 className="w-5 h-5 text-white shrink-0" />}
-      </button>
-
-      <div className="flex items-center gap-3">
-        <span className="h-px flex-1 bg-border-warm" />
-        <span className="text-[10px] uppercase tracking-[0.25em] text-ink-light">or pick specific roles</span>
-        <span className="h-px flex-1 bg-border-warm" />
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-        {(Object.keys(VOLUNTEER_ROLE_CONFIG) as VolunteerRole[]).map((r) => {
-          const cfg = VOLUNTEER_ROLE_CONFIG[r];
-          const active = !draft.anyRole && draft.roles.includes(r);
-          return (
-            <button
-              key={r}
-              onClick={() => toggleRole(r)}
-              disabled={draft.anyRole}
-              className={`relative flex items-start gap-3 rounded-2xl border-2 p-4 text-left transition-all disabled:opacity-40 ${
-                active
-                  ? 'bg-bg-card shadow-card'
-                  : 'bg-bg-card border-border-custom hover:shadow-card'
-              }`}
-              style={active ? { borderColor: cfg.color } : undefined}
-            >
-              <span
-                className="w-2 h-2 rounded-full mt-1.5 shrink-0"
-                style={{ backgroundColor: cfg.color }}
-              />
-              <div className="flex-1 min-w-0">
-                <p className="font-display text-base font-medium text-ink leading-tight">{cfg.label}</p>
-                <p className="text-[11px] text-ink-light mt-0.5">{cfg.description}</p>
-              </div>
-              {active && <CheckCircle2 className="w-4 h-4 shrink-0 mt-1" style={{ color: cfg.color }} />}
-            </button>
-          );
-        })}
-      </div>
-
-      <PrimaryNext label="Continue" onClick={onNext} disabled={!ok} />
-    </StepShell>
-  );
-}
-
-// ─── Step 4: Details ──────────────────────────────────────────────────────────
+// ─── Step 3: Details ──────────────────────────────────────────────────────────
 function DetailsStep({
   draft, onPatch, onBack, onSubmit, ok,
 }: {
@@ -626,7 +534,6 @@ function DoneStep({ signup, onAnother }: { signup?: StoredSignup; onAnother: () 
       <div className="bg-bg-card rounded-2xl shadow-card border border-border-custom p-5 max-w-md mx-auto text-left space-y-2">
         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-sp-red mb-1">Quick summary</p>
         <SummaryLine label="Days" value={signup?.days.length ? signup.days.length + ' day' + (signup.days.length === 1 ? '' : 's') : '—'} />
-        <SummaryLine label="Roles" value={signup?.anyRole ? 'Any role needed' : signup?.roles.map((r) => VOLUNTEER_ROLE_CONFIG[r].label).join(', ') || '—'} />
         <SummaryLine label="Time of day" value={signup?.hoursPref ?? '—'} capitalize />
         <SummaryLine label="Shirt" value={signup?.shirtSize || '—'} />
       </div>
