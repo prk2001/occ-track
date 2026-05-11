@@ -18,6 +18,7 @@ import {
   timeAgo,
 } from '@/data/mockData';
 import type { DayBlock, StoredSignup } from '@/data/mockData';
+import { findDuplicateSignups, signupInScopeForUser, DEFAULT_CDO_ID, LOCATIONS } from '@/data/mockData';
 import { logAuditEvent } from '@/lib/auditLog';
 import { buildArrivalConfirmation, sendMessage } from '@/lib/outbox';
 
@@ -54,30 +55,41 @@ export default function Signups() {
     [user],
   );
 
+  // Scope filter — Super Admin / SP Admin see everything; Regional sees
+  // only their region's CDOs; CDO Leader sees only their own CDO (currently
+  // privacy-gated entirely; included for future per-CDO admin views).
+  // Computed up here (before the view-log effect) so the effect can read it.
+  const scopedSignups = useMemo(
+    () => signups.filter((s) => signupInScopeForUser(user, s)),
+    [signups, user],
+  );
+
   // Log "viewed signups" once per mount per role — not on every re-render.
   // We use a ref guard rather than an effect dependency on `signups.length`
   // because that would fire again whenever someone removes a signup.
   const viewLogged = useRef(false);
   useEffect(() => {
     if (isRegionalAdmin && !viewLogged.current && user) {
-      logAuditEvent(actor, 'view_signups', `signups:count=${signups.length}`);
+      logAuditEvent(actor, 'view_signups', `signups:count=${scopedSignups.length}`);
       viewLogged.current = true;
     }
-  }, [isRegionalAdmin, user, actor, signups.length]);
+  }, [isRegionalAdmin, user, actor, scopedSignups.length]);
 
   function downloadCSV() {
-    if (signups.length === 0) return;
+    if (scopedSignups.length === 0) return;
     const escape = (v: string | number | boolean | null | undefined) => {
       if (v === null || v === undefined) return '';
       const s = String(v).replace(/"/g, '""');
       return /[",\n]/.test(s) ? `"${s}"` : s;
     };
-    const header = ['Name', 'Email', 'Phone', 'ZIP', 'First Time?', 'Shirt', 'Emergency Name', 'Emergency Phone', 'Notes', 'Submitted'];
-    const rows = signups.map((s) => [
+    const cdoCol = (s: StoredSignup) => LOCATIONS.find((l) => l.id === (s.locationId ?? DEFAULT_CDO_ID))?.name ?? '';
+    const header = ['Name', 'Email', 'Phone', 'ZIP', 'CDO', 'First Time?', 'Shirt', 'Emergency Name', 'Emergency Phone', 'Notes', 'Submitted'];
+    const rows = scopedSignups.map((s) => [
       s.name,
       s.email,
       s.phone,
       s.zip ?? '',
+      cdoCol(s),
       s.firstTime === true ? 'Yes' : s.firstTime === false ? 'No' : '',
       s.shirtSize ?? '',
       s.emergencyName ?? '',
@@ -111,22 +123,26 @@ export default function Signups() {
   }
 
   function clearAllSignups() {
-    if (signups.length === 0) return;
-    if (confirm(`Remove all ${signups.length} signups? This cannot be undone.`)) {
-      const count = signups.length;
-      setSignups([]);
-      logAuditEvent(actor, 'clear_all_signups', undefined, `Cleared ${count} signups`);
+    if (scopedSignups.length === 0) return;
+    if (confirm(`Remove all ${scopedSignups.length} signups in scope? This cannot be undone.`)) {
+      const count = scopedSignups.length;
+      // Only remove signups in scope — preserves data from outside the
+      // current user's region (e.g. Regional Admin shouldn't be able to
+      // nuke another region's volunteers by accident).
+      const scopedIds = new Set(scopedSignups.map((s) => s.id));
+      setSignups((prev) => prev.filter((s) => !scopedIds.has(s.id)));
+      logAuditEvent(actor, 'clear_all_signups', undefined, `Cleared ${count} signups in scope`);
     }
   }
 
   function emailAllSignups() {
-    const emails = signups.map((s) => s.email).filter(Boolean).join(',');
+    const emails = scopedSignups.map((s) => s.email).filter(Boolean).join(',');
     if (!emails) return;
     window.location.href = `mailto:?bcc=${encodeURIComponent(emails)}&subject=${encodeURIComponent('Collection Week 2026 — Volunteer Update')}`;
-    logAuditEvent(actor, 'email_all', undefined, `Opened mailto: with ${signups.length} BCC recipients`);
+    logAuditEvent(actor, 'email_all', undefined, `Opened mailto: with ${scopedSignups.length} BCC recipients`);
   }
 
-  const filteredSignups = signups
+  const filteredSignups = scopedSignups
     .filter((s) => {
       const q = query.trim().toLowerCase();
       if (!q) return true;
@@ -203,13 +219,34 @@ export default function Signups() {
   const upcomingDays = COLLECTION_DAYS.filter((_, i) => i + 1 >= COLLECTION_DAY).length;
   const upcomingOpenDays = COLLECTION_DAYS.filter((d, i) => i + 1 >= COLLECTION_DAY && !blocksByDate.has(d.date)).length;
 
-  // Day-of attendance: how many signed-up volunteers have shown up today?
+  // Compute which scopedSignups have at least one duplicate match (by
+  // email or phone) within the scope. O(n²) is fine — even a large CDO
+  // won't push beyond ~200 signups in a season.
+  const duplicateIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const s of scopedSignups) {
+      const others = scopedSignups.filter((o) => o.id !== s.id);
+      const matches = findDuplicateSignups(others, { email: s.email, phone: s.phone });
+      if (matches.length > 0) ids.add(s.id);
+    }
+    return ids;
+  }, [scopedSignups]);
+
+  // Day-of attendance: how many SCOPED signed-up volunteers have shown up today?
   // The demo treats today as COLLECTION_DAYS[COLLECTION_DAY-1].date (Thu Nov 19).
   const todayISODate = COLLECTION_DAYS[COLLECTION_DAY - 1]?.date ?? new Date().toISOString().slice(0, 10);
-  const arrivedToday = signups.filter(
+  const arrivedToday = scopedSignups.filter(
     (s) => s.arrivedAt && s.arrivedAt.slice(0, 10) === todayISODate,
   ).length;
-  const arrivalRate = signups.length === 0 ? 0 : Math.round((arrivedToday / signups.length) * 100);
+  const arrivalRate = scopedSignups.length === 0 ? 0 : Math.round((arrivedToday / scopedSignups.length) * 100);
+
+  // Scope label for the hero — tells the admin which slice they're viewing.
+  const scopeLabel = (() => {
+    if (!user) return cdoLabel;
+    if (user.role === 'super_admin' || user.role === 'admin') return 'All CDOs nationwide';
+    if (user.role === 'regional') return `${user.regionId === 'all' ? 'All regions' : 'Your region'}`;
+    return cdoLabel;
+  })();
 
   return (
     <Layout>
@@ -237,11 +274,11 @@ export default function Signups() {
                 <h1 className="font-display text-3xl sm:text-4xl text-ink leading-[1.05] tracking-tight">
                   Plan the week.
                   <span className="font-display-italic block text-sp-red mt-1">
-                    {signups.length} {signups.length === 1 ? 'volunteer' : 'volunteers'} ready.
+                    {scopedSignups.length} {scopedSignups.length === 1 ? 'volunteer' : 'volunteers'} ready.
                   </span>
                 </h1>
                 <p className="text-sm text-ink-light italic">
-                  {cdoLabel} · {upcomingOpenDays} of {upcomingDays} upcoming days still open for signups
+                  {scopeLabel} · {upcomingOpenDays} of {upcomingDays} upcoming days still open for signups
                 </p>
               </>
             ) : (
@@ -269,18 +306,18 @@ export default function Signups() {
           <>
             {/* Stats */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 print-hide">
-              <StatTile icon={ClipboardList} label="Pending Signups" value={String(signups.length)} bg="bg-sp-red-light" color="text-sp-red" />
-              <StatTile icon={UserCheck} label="Arrived Today" value={`${arrivedToday}${signups.length > 0 ? ` (${arrivalRate}%)` : ''}`} bg="bg-occ-green-light" color="text-occ-green" />
+              <StatTile icon={ClipboardList} label="Pending Signups" value={String(scopedSignups.length)} bg="bg-sp-red-light" color="text-sp-red" />
+              <StatTile icon={UserCheck} label="Arrived Today" value={`${arrivedToday}${scopedSignups.length > 0 ? ` (${arrivalRate}%)` : ''}`} bg="bg-occ-green-light" color="text-occ-green" />
               <StatTile icon={Unlock} label="Open Days" value={String(openDays)} bg="bg-blue-light" color="text-blue-accent" />
               <StatTile icon={Lock} label="Covered Days" value={String(blocks.length)} bg="bg-gold-light" color="text-gold" />
             </div>
 
             {/* Day-of attendance — only renders during Collection Week when
                 signups exist. Lets the Greeter at the welcome table check
-                volunteers off as they arrive. */}
-            {signups.length > 0 && (
+                volunteers off as they arrive. Scoped to user's region. */}
+            {scopedSignups.length > 0 && (
               <AttendanceSection
-                signups={signups}
+                signups={scopedSignups}
                 onMarkArrived={markArrived}
                 onUnmarkArrived={unmarkArrived}
                 todayISODate={todayISODate}
@@ -337,13 +374,13 @@ export default function Signups() {
               <header className="mb-3 flex items-center justify-between gap-3 flex-wrap">
                 <div>
                   <h2 className="font-display text-xl text-ink leading-tight">
-                    {signups.length} {signups.length === 1 ? 'Signup' : 'Signups'}
+                    {scopedSignups.length} {scopedSignups.length === 1 ? 'Signup' : 'Signups'}
                   </h2>
                   <p className="text-xs text-ink-light italic mt-1">
                     Volunteers who said they'd serve this Collection Week.
                   </p>
                 </div>
-                {signups.length > 0 && (
+                {scopedSignups.length > 0 && (
                   <div className="flex items-center gap-2 print-hide flex-wrap">
                     <button
                       onClick={downloadCSV}
@@ -354,7 +391,7 @@ export default function Signups() {
                     </button>
                     <button
                       onClick={() => {
-                        logAuditEvent(actor, 'print_roster', undefined, `Printed roster with ${signups.length} signups`);
+                        logAuditEvent(actor, 'print_roster', undefined, `Printed roster with ${scopedSignups.length} signups`);
                         window.print();
                       }}
                       className="h-9 px-3 bg-bg-primary border border-border-custom hover:border-occ-green hover:text-occ-green text-ink-light text-xs font-bold rounded-xl flex items-center gap-1.5 uppercase tracking-wider transition-all"
@@ -362,6 +399,13 @@ export default function Signups() {
                       <Printer className="w-3 h-3" />
                       Print
                     </button>
+                    <Link
+                      to="/badges"
+                      className="h-9 px-3 bg-bg-primary border border-border-custom hover:border-purple-accent hover:text-purple-accent text-ink-light text-xs font-bold rounded-xl flex items-center gap-1.5 uppercase tracking-wider transition-all"
+                    >
+                      <Printer className="w-3 h-3" />
+                      Badges
+                    </Link>
                     <button
                       onClick={emailAllSignups}
                       className="h-9 px-3 bg-lime hover:bg-lime-dark transition-colors text-occ-green-dark hover:text-white text-xs font-bold rounded-xl flex items-center gap-1.5 uppercase tracking-wider"
@@ -378,7 +422,7 @@ export default function Signups() {
                     </button>
                   </div>
                 )}
-                {signups.length === 0 && (
+                {scopedSignups.length === 0 && (
                   <Link
                     to="/signup"
                     className="text-xs font-semibold text-sp-red hover:underline flex items-center gap-1"
@@ -387,7 +431,7 @@ export default function Signups() {
                   </Link>
                 )}
               </header>
-              {signups.length > 0 && (
+              {scopedSignups.length > 0 && (
                 <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2 mb-3 print-hide">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-light/60 pointer-events-none" />
@@ -406,7 +450,7 @@ export default function Signups() {
                 </div>
               )}
 
-              {signups.length === 0 ? (
+              {scopedSignups.length === 0 ? (
                 <div className="bg-bg-card rounded-2xl border border-border-custom p-10 text-center">
                   <ClipboardList className="w-10 h-10 text-ink-light/40 mx-auto mb-3" />
                   <p className="font-display text-base text-ink mb-1">No signups yet.</p>
@@ -430,7 +474,12 @@ export default function Signups() {
                   className="grid grid-cols-1 lg:grid-cols-2 gap-3"
                 >
                   {filteredSignups.map((s) => (
-                    <SignupCard key={s.id} signup={s} onRemove={() => removeSignup(s.id)} />
+                    <SignupCard
+                      key={s.id}
+                      signup={s}
+                      isDuplicate={duplicateIds.has(s.id)}
+                      onRemove={() => removeSignup(s.id)}
+                    />
                   ))}
                 </motion.ul>
               )}
@@ -581,7 +630,7 @@ function DayCard({
 }
 
 // ─── Signup card ────────────────────────────────────────────────────────────
-function SignupCard({ signup, onRemove }: { signup: StoredSignup; onRemove: () => void }) {
+function SignupCard({ signup, isDuplicate, onRemove }: { signup: StoredSignup; isDuplicate?: boolean; onRemove: () => void }) {
   const initials = signup.name.split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase();
   return (
     <motion.li
@@ -613,6 +662,14 @@ function SignupCard({ signup, onRemove }: { signup: StoredSignup; onRemove: () =
                   title={`Volunteer self-edited via magic link · ${new Date(signup.lastEditedAt).toLocaleString()}`}
                 >
                   Self-edited · {timeAgo(signup.lastEditedAt)}
+                </span>
+              )}
+              {isDuplicate && (
+                <span
+                  className="text-[9px] font-bold uppercase tracking-wider text-gold bg-gold-light px-2 py-0.5 rounded-full whitespace-nowrap"
+                  title="Email or phone matches another signup — possible duplicate"
+                >
+                  ⚠ Duplicate
                 </span>
               )}
             </div>
@@ -727,13 +784,22 @@ function AttendanceSection({
             Tap each volunteer as they arrive. {arrivedCount} of {signups.length} checked in today.
           </p>
         </div>
-        <Link
-          to="/clock"
-          className="text-[10px] font-bold uppercase tracking-wider text-sp-red hover:underline flex items-center gap-1"
-        >
-          Open kiosk mode
-          <ChevronRight className="w-3 h-3" />
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link
+            to="/welcome-table"
+            className="text-[10px] font-bold uppercase tracking-wider text-sp-red hover:underline flex items-center gap-1"
+          >
+            iPad mode
+            <ChevronRight className="w-3 h-3" />
+          </Link>
+          <Link
+            to="/clock"
+            className="text-[10px] font-bold uppercase tracking-wider text-ink-light hover:text-sp-red flex items-center gap-1"
+          >
+            Clock kiosk
+            <ChevronRight className="w-3 h-3" />
+          </Link>
+        </div>
       </header>
       <div className="bg-bg-card rounded-2xl border border-border-custom overflow-hidden">
         {/* Progress bar — visual gauge of attendance rate */}

@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   HandHeart, ChevronLeft, ChevronRight, X, User, Phone, Mail, MapPin,
   CheckCircle2, Sparkles, Shield, Shirt, MessageCircle, CalendarDays, Lock,
-  Link2, Copy, Check,
+  Link2, Copy, Check, AlertTriangle,
 } from 'lucide-react';
 import Layout from '@/components/Layout';
 import Logo from '@/components/Logo';
@@ -18,7 +18,14 @@ import {
   COLLECTION_WEEK_START,
   COLLECTION_WEEK_END,
 } from '@/data/mockData';
-import { defaultTokenExpiry } from '@/data/mockData';
+import {
+  defaultTokenExpiry,
+  findDuplicateSignups,
+  getLocationById,
+  inferCdoFromZip,
+  LOCATIONS,
+  USERS,
+} from '@/data/mockData';
 import type { DayBlock, ShirtSize, StoredSignup } from '@/data/mockData';
 import { logAuditEvent } from '@/lib/auditLog';
 import { buildCdoSignupAlert, buildSignupConfirmation, sendMessage } from '@/lib/outbox';
@@ -86,12 +93,17 @@ export default function VolunteerSignup() {
         ? crypto.randomUUID()
         : `tok_${Date.now()}_${Math.random().toString(36).slice(2, 12)}`;
     const submittedAt = new Date().toISOString();
+    // Auto-route to closest Central Drop-off based on ZIP. The volunteer can
+    // change it later via their magic link if we guessed wrong (e.g., they
+    // want to serve at a different CDO than the one nearest their home).
+    const inferredCdo = inferCdoFromZip(draft.zip);
     const stored: StoredSignup = {
       ...draft,
       id,
       submittedAt,
       editToken,
       editTokenExpiresAt: defaultTokenExpiry(submittedAt),
+      locationId: inferredCdo,
     };
     setSignups((prev) => [stored, ...prev]);
     setSubmittedId(id);
@@ -124,20 +136,30 @@ export default function VolunteerSignup() {
       // In-app notifications: the CDO Leader hosting this location and the
       // Regional Admin overseeing this region both get a navbar ping so
       // they're aware of new signups without having to refresh /signups.
-      // Hard-coded to u3 (Maria, CDO Leader at cdo1) and u2 (David Chen,
-      // Regional Admin Southeast) until per-CDO scoping ships.
-      sendMessage(buildCdoSignupAlert({
-        cdoUserId: 'u3',
-        cdoUserName: 'Maria Rodriguez',
-        volunteerName: stored.name,
-        signupId: id,
-      }));
-      sendMessage(buildCdoSignupAlert({
-        cdoUserId: 'u2',
-        cdoUserName: 'David Chen',
-        volunteerName: stored.name,
-        signupId: id,
-      }));
+      // Per-CDO scoping (Phase 18a): we look up the actual leadership for
+      // this signup's locationId instead of hard-coding u3/u2.
+      const cdoLeader = USERS.find((u) => u.role === 'cdo_leader' && u.locationId === inferredCdo);
+      const cdoLocation = LOCATIONS.find((l) => l.id === inferredCdo);
+      const regionalAdmin = cdoLocation
+        ? USERS.find((u) => u.role === 'regional' && /* matches region by location's state */
+            true /* TODO: real region routing — for prototype, single regional always notified */)
+        : undefined;
+      if (cdoLeader) {
+        sendMessage(buildCdoSignupAlert({
+          cdoUserId: cdoLeader.id,
+          cdoUserName: cdoLeader.name,
+          volunteerName: stored.name,
+          signupId: id,
+        }));
+      }
+      if (regionalAdmin) {
+        sendMessage(buildCdoSignupAlert({
+          cdoUserId: regionalAdmin.id,
+          cdoUserName: regionalAdmin.name,
+          volunteerName: stored.name,
+          signupId: id,
+        }));
+      }
     }
   }
 
@@ -514,6 +536,8 @@ function DetailsStep({
         </div>
       </div>
 
+      <DuplicateWarning draft={draft} />
+
       <label className="flex items-start gap-3 bg-bg-cream border border-border-warm rounded-2xl p-4 cursor-pointer">
         <input
           type="checkbox"
@@ -569,6 +593,10 @@ function DoneStep({ signup, onAnother }: { signup?: StoredSignup; onAnother: () 
 
       <div className="bg-bg-card rounded-2xl shadow-card border border-border-custom p-5 max-w-md mx-auto text-left space-y-2">
         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-sp-red mb-1">Quick summary</p>
+        <SummaryLine
+          label="Serving at"
+          value={getLocationById(signup?.locationId ?? '')?.name ?? '—'}
+        />
         <SummaryLine label="Phone" value={signup?.phone ?? '—'} />
         <SummaryLine label="Email" value={signup?.email ?? '—'} />
         <SummaryLine label="Shirt" value={signup?.shirtSize || '—'} />
@@ -651,6 +679,33 @@ function MagicLinkCard({ token, email }: { token: string; email: string }) {
           {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
           {copied ? 'Copied' : 'Copy'}
         </button>
+      </div>
+    </div>
+  );
+}
+
+// Duplicate-signup warning — shown on the Details step when the email or
+// phone matches an existing signup. Non-blocking on purpose: families
+// sometimes use a shared email/phone, and we'd rather let them through
+// than hard-block a real case.
+function DuplicateWarning({ draft }: { draft: SignupDraft }) {
+  const [signups] = useLocalStorage<StoredSignup[]>('occ:signups', []);
+  const dupes = findDuplicateSignups(signups, { email: draft.email, phone: draft.phone });
+  if (dupes.length === 0) return null;
+  const existing = dupes[0];
+  return (
+    <div className="bg-gold-light border border-gold rounded-2xl p-4 flex items-start gap-3">
+      <AlertTriangle className="w-5 h-5 text-gold shrink-0 mt-0.5" />
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold text-ink">
+          We already have a signup with this {existing.email === draft.email ? 'email' : 'phone'}.
+        </p>
+        <p className="text-xs text-ink-light italic mt-1 leading-relaxed">
+          <strong className="text-ink not-italic">{existing.name}</strong> signed up via this contact info. If
+          that&apos;s you, use your edit link instead of submitting again — search your
+          inbox for &quot;Operation Christmas Child.&quot; Multiple family members sharing one
+          email? Just submit; we&apos;ll dedupe later.
+        </p>
       </div>
     </div>
   );

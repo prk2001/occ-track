@@ -58,7 +58,12 @@ export default function Navbar({ title }: NavbarProps) {
     { label: 'Volunteers', path: '/volunteers', icon: 'volunteers' },
     // Signups & Schedule contains individual volunteer PII — only visible
     // to Regional Admin, SP Admin, and Super Admin.
-    ...(isRegionalAdmin ? [{ label: 'Signups & Schedule', path: '/signups', icon: 'signups' }] : []),
+    ...(isRegionalAdmin
+      ? [
+          { label: 'Signups & Schedule', path: '/signups', icon: 'signups' },
+          { label: 'Print Badges', path: '/badges', icon: 'badges' },
+        ]
+      : []),
     // Audit log: who saw what + when. National HQ only — this is the
     // "watch the watchers" view that proves data governance is real.
     ...(isSuperAdmin

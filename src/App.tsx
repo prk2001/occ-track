@@ -14,6 +14,8 @@ import Clock from '@/pages/Clock';
 import VolunteerSignup from '@/pages/VolunteerSignup';
 import Signups from '@/pages/Signups';
 import MySignup from '@/pages/MySignup';
+import WelcomeTable from '@/pages/WelcomeTable';
+import Badges from '@/pages/Badges';
 import AuditLog from '@/pages/AuditLog';
 import Outbox from '@/pages/Outbox';
 import States from '@/pages/States';
@@ -38,6 +40,8 @@ export default function App() {
         <Route path="/signup" element={<VolunteerSignup />} />
         <Route path="/signups" element={<Signups />} />
         <Route path="/my-signup" element={<MySignup />} />
+        <Route path="/welcome-table" element={<WelcomeTable />} />
+        <Route path="/badges" element={<Badges />} />
         <Route path="/audit-log" element={<AuditLog />} />
         <Route path="/outbox" element={<Outbox />} />
         <Route path="/states" element={<States />} />

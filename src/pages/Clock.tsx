@@ -10,6 +10,7 @@ import { useLocalStorage } from '@/hooks/useLocalStorage';
 import {
   COLLECTION_DAY,
   COLLECTION_DAYS,
+  DEFAULT_CDO_ID,
   LOCATIONS,
   VOLUNTEERS,
   VOLUNTEER_ROLE_CONFIG,
@@ -54,9 +55,14 @@ export default function Clock() {
   // Walk-up community volunteers who signed up via /signup. Show them in
   // the kiosk so they can tap their own name on arrival — without the
   // Greeter having to know who's regular church team vs. who's walk-up.
+  // Scoped to the current kiosk's location so volunteers signed up for
+  // other CDOs don't appear at the wrong welcome table.
   const todayISODate = COLLECTION_DAYS[COLLECTION_DAY - 1]?.date ?? new Date().toISOString().slice(0, 10);
-  const signupsToday = signups.filter((s) => !s.arrivedAt || s.arrivedAt.slice(0, 10) !== todayISODate);
-  const arrivedSignups = signups.filter((s) => s.arrivedAt && s.arrivedAt.slice(0, 10) === todayISODate);
+  const signupsAtThisCdo = signups.filter(
+    (s) => (s.locationId ?? DEFAULT_CDO_ID) === locationId,
+  );
+  const signupsToday = signupsAtThisCdo.filter((s) => !s.arrivedAt || s.arrivedAt.slice(0, 10) !== todayISODate);
+  const arrivedSignups = signupsAtThisCdo.filter((s) => s.arrivedAt && s.arrivedAt.slice(0, 10) === todayISODate);
 
   function markSignupArrived(signupId: string) {
     const now = new Date().toISOString();

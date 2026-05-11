@@ -179,6 +179,11 @@ export interface StoredSignup {
   email: string;
   phone: string;
   zip?: string;
+  // locationId: the Central Drop-off this volunteer signed up to serve at.
+  // Auto-assigned from ZIP at signup time; can be changed later via the
+  // self-service magic link. Optional for backward compatibility with old
+  // signups created before Phase 18 — they default to DEFAULT_CDO_ID.
+  locationId?: string;
   firstTime: boolean | null;
   shirtSize: ShirtSize | '';
   emergencyName: string;
@@ -209,6 +214,92 @@ export interface StoredSignup {
     t1Sent?: string;     // ISO timestamp of when the T-1 day reminder fired
     dayOfSent?: string;  // ISO timestamp of when the day-of reminder fired
   };
+}
+
+// Backward-compat default: signups missing locationId belong to the demo CDO.
+export const DEFAULT_CDO_ID = 'cdo1';
+
+// Given a ZIP, return the closest active Central Drop-off by city match.
+// Real implementation would use geocoding + distance calc; for the prototype
+// we route by state + city for ZIPs we know, falling back to the regional
+// CDO and finally to the demo default.
+export function inferCdoFromZip(zip: string | undefined): string {
+  if (!zip) return DEFAULT_CDO_ID;
+  const info = ZIP_LOOKUP[zip.trim()];
+  if (!info) return DEFAULT_CDO_ID;
+  // Find an active CDO in the same state; prefer same-city match if any.
+  const candidatesInState = LOCATIONS.filter(
+    (l) => l.type === 'central' && l.status === 'active' && l.state === info.state,
+  );
+  const cityMatch = candidatesInState.find((l) => l.city === info.city);
+  if (cityMatch) return cityMatch.id;
+  if (candidatesInState[0]) return candidatesInState[0].id;
+  // No same-state CDO — try same-region as a last resort.
+  const stateRow = STATES.find((s) => s.abbreviation === info.state);
+  if (stateRow) {
+    const regionMatch = LOCATIONS.find(
+      (l) => l.type === 'central' && l.status === 'active' && l.region === stateRow.region,
+    );
+    if (regionMatch) return regionMatch.id;
+  }
+  return DEFAULT_CDO_ID;
+}
+
+// Normalize email for duplicate matching: lowercase, trim, strip any
+// trailing whitespace. Doesn't try Gmail-dot-trick normalization on purpose
+// (those are real separate aliases in many contexts).
+export function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
+// Normalize phone for duplicate matching: digits only, strip country codes.
+export function normalizePhone(phone: string): string {
+  const digits = phone.replace(/\D/g, '');
+  // Strip leading "1" country code if present (US/Canada).
+  return digits.length === 11 && digits.startsWith('1') ? digits.slice(1) : digits;
+}
+
+// Find signups whose email or phone matches the candidate. Returns an
+// empty array if no matches. Used by VolunteerSignup to warn about
+// duplicates and by Signups admin to badge them.
+export function findDuplicateSignups(
+  signups: StoredSignup[],
+  candidate: { email?: string; phone?: string },
+  excludeId?: string,
+): StoredSignup[] {
+  const ce = candidate.email ? normalizeEmail(candidate.email) : '';
+  const cp = candidate.phone ? normalizePhone(candidate.phone) : '';
+  return signups.filter((s) => {
+    if (excludeId && s.id === excludeId) return false;
+    const se = s.email ? normalizeEmail(s.email) : '';
+    const sp = s.phone ? normalizePhone(s.phone) : '';
+    return (ce && se === ce) || (cp && cp.length >= 7 && sp === cp);
+  });
+}
+
+// Returns true if the given user should see the given signup. Centralized
+// so the Signups roster, WelcomeTableWidget, AuditLog scope filters, etc.
+// all share one source of truth for "who can see what."
+//   Super Admin / SP Admin: see everything.
+//   Regional Admin: see only signups at CDOs in their region.
+//   CDO Leader: see only signups at their own CDO (currently gated entirely
+//     by Phase 14 — included here for the day per-CDO admin views ship).
+//   Lower roles: see nothing through this function.
+export function signupInScopeForUser(user: User | null, signup: StoredSignup): boolean {
+  if (!user) return false;
+  const sigLoc = signup.locationId ?? DEFAULT_CDO_ID;
+  if (user.role === 'super_admin' || user.role === 'admin') return true;
+  if (user.role === 'regional') {
+    const location = LOCATIONS.find((l) => l.id === sigLoc);
+    if (!location || !user.regionId || user.regionId === 'all') return true;
+    const regionRow = REGION_DATA.find((r) => r.id === user.regionId);
+    if (!regionRow) return false;
+    return location.region === regionRow.name;
+  }
+  if (user.role === 'cdo_leader') {
+    return user.locationId === sigLoc;
+  }
+  return false;
 }
 
 // ── Magic link token expiry helpers ───────────────────────────────────────

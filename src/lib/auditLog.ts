@@ -95,6 +95,57 @@ export function getAuditEvents(): AuditEvent[] {
   }
 }
 
+// Purge events older than `cutoffDays` days. Returns the number of events
+// removed. The purge action itself writes a new event to the log so the
+// retention action is itself auditable — destroying evidence perfectly is
+// not a thing this system allows.
+export function purgeEventsOlderThanDays(cutoffDays: number, actor: ActorContext): number {
+  if (typeof window === 'undefined') return 0;
+  try {
+    const raw = window.localStorage.getItem(AUDIT_LOG_KEY);
+    const existing: AuditEvent[] = raw ? JSON.parse(raw) : [];
+    const cutoffMs = Date.now() - cutoffDays * 24 * 60 * 60 * 1000;
+    const kept = existing.filter((e) => new Date(e.timestamp).getTime() >= cutoffMs);
+    const removed = existing.length - kept.length;
+    window.localStorage.setItem(AUDIT_LOG_KEY, JSON.stringify(kept));
+    if (removed > 0) {
+      // Log the purge itself.
+      logAuditEvent(
+        actor,
+        'clear_all_signups',
+        'audit-log',
+        `Purged ${removed} audit events older than ${cutoffDays} days`,
+      );
+    }
+    return removed;
+  } catch {
+    return 0;
+  }
+}
+
+// Hard wipe — remove every event including ones that would otherwise be
+// kept by a retention window. The wipe itself is recorded immediately
+// after, so the log starts back at "Super Admin purged everything" instead
+// of empty (forensic breadcrumb).
+export function purgeAllEvents(actor: ActorContext): number {
+  if (typeof window === 'undefined') return 0;
+  try {
+    const raw = window.localStorage.getItem(AUDIT_LOG_KEY);
+    const existing: AuditEvent[] = raw ? JSON.parse(raw) : [];
+    const count = existing.length;
+    window.localStorage.setItem(AUDIT_LOG_KEY, JSON.stringify([]));
+    logAuditEvent(
+      actor,
+      'clear_all_signups',
+      'audit-log',
+      `Purged ALL ${count} audit events (full wipe)`,
+    );
+    return count;
+  } catch {
+    return 0;
+  }
+}
+
 // Human-readable label + tone color for the viewer table.
 export function getActionLabel(action: AuditAction): { label: string; tone: 'view' | 'edit' | 'destructive' | 'create' } {
   switch (action) {

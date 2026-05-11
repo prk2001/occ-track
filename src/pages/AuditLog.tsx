@@ -3,7 +3,7 @@ import { Link } from 'react-router';
 import { motion } from 'framer-motion';
 import {
   Shield, ChevronRight, Eye, Edit3, Trash2, Plus, Download, Search,
-  Lock, Filter, ArrowLeft,
+  Lock, Filter, ArrowLeft, AlertTriangle, Archive,
 } from 'lucide-react';
 import Layout from '@/components/Layout';
 import { useAuth } from '@/hooks/useAuth';
@@ -12,6 +12,8 @@ import {
   AUDIT_LOG_KEY,
   getActionLabel,
   logAuditEvent,
+  purgeEventsOlderThanDays,
+  purgeAllEvents,
 } from '@/lib/auditLog';
 import type { AuditAction, AuditEvent } from '@/lib/auditLog';
 import { ROLE_CONFIG, timeAgo } from '@/data/mockData';
@@ -35,6 +37,21 @@ export default function AuditLog() {
   const [events] = useLocalStorage<AuditEvent[]>(AUDIT_LOG_KEY, []);
   const [query, setQuery] = useState('');
   const [actionFilter, setActionFilter] = useState<AuditAction | 'all'>('all');
+  const [showRetention, setShowRetention] = useState(false);
+  const [purgeResult, setPurgeResult] = useState<string | null>(null);
+
+  function runPurge(days: number | 'all') {
+    if (!user) return;
+    const actor = { id: user.id, name: user.name, role: user.role };
+    const label = days === 'all' ? 'ALL audit events' : `events older than ${days} days`;
+    if (!confirm(`Permanently delete ${label}? This cannot be undone.`)) return;
+    const removed = days === 'all'
+      ? purgeAllEvents(actor)
+      : purgeEventsOlderThanDays(days, actor);
+    setPurgeResult(removed > 0 ? `Purged ${removed} ${removed === 1 ? 'event' : 'events'}.` : 'Nothing matched the retention window.');
+    setTimeout(() => setPurgeResult(null), 4000);
+    setShowRetention(false);
+  }
 
   // View-once-per-mount: log that Super Admin opened the audit log.
   // This is recursive on purpose — looking at the audit log IS itself
@@ -201,6 +218,56 @@ export default function AuditLog() {
           />
         </div>
 
+        {/* Retention controls — Super Admin can purge events older than a
+            cutoff window or wipe the whole log. Each purge itself records
+            an event so destroying evidence completely isn't possible. */}
+        <section className="bg-bg-card rounded-2xl border border-border-custom overflow-hidden">
+          <button
+            onClick={() => setShowRetention((v) => !v)}
+            className="w-full px-5 py-4 flex items-center justify-between hover:bg-bg-primary/40 transition-colors"
+          >
+            <div className="flex items-center gap-3 text-left">
+              <div className="w-10 h-10 bg-gold-light rounded-xl flex items-center justify-center shrink-0">
+                <Archive className="w-5 h-5 text-gold" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-ink">Retention &amp; purge</p>
+                <p className="text-[11px] text-ink-light italic mt-0.5">
+                  Clear old events to comply with minimum-necessary retention.
+                </p>
+              </div>
+            </div>
+            <ChevronRight className={`w-4 h-4 text-ink-light transition-transform ${showRetention ? 'rotate-90' : ''}`} />
+          </button>
+          {showRetention && (
+            <div className="border-t border-border-custom p-5 bg-bg-primary/40 space-y-3">
+              <div className="flex items-start gap-2 text-xs text-ink-light">
+                <AlertTriangle className="w-4 h-4 text-gold shrink-0 mt-0.5" />
+                <p className="leading-relaxed">
+                  Purges are <strong>permanent</strong>. The retention action itself
+                  is logged immediately afterwards (forensic breadcrumb), so a wipe
+                  doesn&apos;t leave an empty log behind.
+                </p>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <PurgeOption days={90} onClick={() => runPurge(90)} />
+                <PurgeOption days={180} onClick={() => runPurge(180)} />
+                <PurgeOption days={365} onClick={() => runPurge(365)} />
+              </div>
+              <button
+                onClick={() => runPurge('all')}
+                className="w-full h-11 bg-sp-red text-white text-xs font-bold rounded-xl uppercase tracking-wider hover:bg-sp-red-dark transition-colors flex items-center justify-center gap-1.5"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Wipe entire audit log
+              </button>
+              {purgeResult && (
+                <p className="text-xs text-occ-green font-semibold text-center pt-2">{purgeResult}</p>
+              )}
+            </div>
+          )}
+        </section>
+
         {/* Filter chips + actions */}
         <section>
           <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2">
@@ -353,6 +420,18 @@ function EventRow({ event }: { event: AuditEvent }) {
         </div>
       </div>
     </motion.li>
+  );
+}
+
+// ─── Retention purge option ───────────────────────────────────────────────
+function PurgeOption({ days, onClick }: { days: number; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="h-11 px-3 bg-bg-card border border-border-custom hover:border-gold hover:bg-gold-light/50 text-ink-light hover:text-gold text-xs font-bold rounded-xl uppercase tracking-wider transition-all"
+    >
+      Older than {days}d
+    </button>
   );
 }
 

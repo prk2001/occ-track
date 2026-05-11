@@ -6,7 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import {
   COLLECTION_DAY,
   COLLECTION_DAYS,
-  getLocationById,
+  signupInScopeForUser,
 } from '@/data/mockData';
 import type { StoredSignup } from '@/data/mockData';
 
@@ -18,14 +18,22 @@ import type { StoredSignup } from '@/data/mockData';
  *
  * Reads `occ:signups` live so when an admin marks an arrival on /signups,
  * this widget updates immediately in the same browser session.
+ *
+ * Per-CDO scoping: Regional Admin sees signups only at CDOs in their
+ * region; Super/SP Admin see everything. Uses signupInScopeForUser
+ * helper for consistency with the /signups page filter.
  */
 export default function WelcomeTableWidget() {
-  const { isRegionalAdmin } = useAuth();
-  const [signups] = useLocalStorage<StoredSignup[]>('occ:signups', []);
+  const { user, isRegionalAdmin } = useAuth();
+  const [allSignups] = useLocalStorage<StoredSignup[]>('occ:signups', []);
 
   // Defense in depth: even if a parent dashboard forgets to gate this,
   // the widget itself refuses to render data for unauthorized roles.
   if (!isRegionalAdmin) return null;
+
+  // Filter to in-scope signups. Same helper used on /signups so the
+  // counts match across views.
+  const signups = allSignups.filter((s) => signupInScopeForUser(user, s));
 
   // Demo "today" = Day 4 of Collection Week (Thu Nov 19, 2026).
   const todayISODate =
@@ -35,7 +43,13 @@ export default function WelcomeTableWidget() {
   ).length;
   const totalSignups = signups.length;
   const arrivalRate = totalSignups === 0 ? 0 : Math.round((arrivedToday / totalSignups) * 100);
-  const cdoLabel = getLocationById('cdo1')?.name ?? 'Central Drop-off';
+  // Scope label tells the admin which slice they're seeing.
+  const cdoLabel = (() => {
+    if (!user) return 'Central Drop-off';
+    if (user.role === 'super_admin' || user.role === 'admin') return 'All CDOs nationwide';
+    if (user.role === 'regional') return 'Your region';
+    return 'Your CDO';
+  })();
 
   // Empty state — no signups yet. Show a soft CTA to share the signup
   // link instead of a "0 of 0" donut that looks broken.

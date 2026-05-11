@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   ShieldCheck, User, Phone, Mail, MapPin, Shield, Shirt, MessageCircle,
   CheckCircle2, AlertCircle, Save, LogOut, Sparkles, Clock as ClockIcon, RefreshCw,
+  Warehouse,
 } from 'lucide-react';
 import Layout from '@/components/Layout';
 import Logo from '@/components/Logo';
@@ -12,7 +13,9 @@ import { logAuditEvent } from '@/lib/auditLog';
 import { buildSelfEditAlert, sendMessage } from '@/lib/outbox';
 import type { ShirtSize, StoredSignup } from '@/data/mockData';
 import {
+  DEFAULT_CDO_ID,
   defaultTokenExpiry,
+  LOCATIONS,
   timeAgo,
   tokenStatus,
   TOKEN_EXTEND_THRESHOLD_DAYS,
@@ -55,6 +58,7 @@ export default function MySignup() {
           email: signup.email,
           phone: signup.phone,
           zip: signup.zip ?? '',
+          locationId: signup.locationId ?? DEFAULT_CDO_ID,
           shirtSize: signup.shirtSize as ShirtSize | '',
           emergencyName: signup.emergencyName,
           emergencyPhone: signup.emergencyPhone,
@@ -99,6 +103,7 @@ export default function MySignup() {
               email: draft.email.trim(),
               phone: draft.phone.trim(),
               zip: draft.zip.trim() || undefined,
+              locationId: draft.locationId,
               shirtSize: draft.shirtSize,
               emergencyName: draft.emergencyName.trim(),
               emergencyPhone: draft.emergencyPhone.trim(),
@@ -118,6 +123,7 @@ export default function MySignup() {
     if (before.email !== draft.email) changes.push('email');
     if (before.phone !== draft.phone) changes.push('phone');
     if ((before.zip ?? '') !== draft.zip) changes.push('zip');
+    if ((before.locationId ?? DEFAULT_CDO_ID) !== draft.locationId) changes.push('CDO');
     if (before.shirtSize !== draft.shirtSize) changes.push('shirt');
     if (before.emergencyName !== draft.emergencyName) changes.push('emergency name');
     if (before.emergencyPhone !== draft.emergencyPhone) changes.push('emergency phone');
@@ -164,6 +170,7 @@ export default function MySignup() {
     draft.email !== signup.email ||
     draft.phone !== signup.phone ||
     (draft.zip || '') !== (signup.zip || '') ||
+    draft.locationId !== (signup.locationId ?? DEFAULT_CDO_ID) ||
     draft.shirtSize !== signup.shirtSize ||
     draft.emergencyName !== signup.emergencyName ||
     draft.emergencyPhone !== signup.emergencyPhone ||
@@ -279,6 +286,27 @@ export default function MySignup() {
               placeholder="30301"
               mono
             />
+
+            {/* Central Drop-off picker — defaults to whatever ZIP-inference
+                routed them to at signup time. Volunteer can change to any
+                active CDO if our guess was wrong. */}
+            <label className="block">
+              <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-ink-light mb-1.5 flex items-center gap-1.5">
+                <Warehouse className="w-4 h-4 text-ink-light/60" />
+                Where you&apos;re serving
+              </span>
+              <select
+                value={draft.locationId}
+                onChange={(e) => patch({ locationId: e.target.value })}
+                className="w-full h-12 px-4 bg-bg-primary border border-border-custom rounded-xl text-base text-ink focus:outline-none focus:border-sp-red transition-colors"
+              >
+                {LOCATIONS.filter((l) => l.type === 'central' && l.status === 'active').map((l) => (
+                  <option key={l.id} value={l.id}>
+                    {l.name} — {l.city}, {l.state}
+                  </option>
+                ))}
+              </select>
+            </label>
 
             <div className="pt-2">
               <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-ink-light mb-2 flex items-center gap-1.5">
