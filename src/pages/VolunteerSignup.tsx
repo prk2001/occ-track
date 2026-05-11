@@ -242,11 +242,13 @@ function IntroStep({ onStart }: { onStart: () => void }) {
       <motion.button
         whileTap={{ scale: 0.97 }}
         onClick={onStart}
-        className="w-full h-16 bg-sp-red text-white text-lg font-semibold rounded-2xl flex items-center justify-center gap-3 shadow-card hover:bg-sp-red-dark transition-colors"
+        className="group w-full h-16 bg-lime hover:bg-lime-dark transition-colors text-occ-green-dark hover:text-white text-lg font-display rounded-2xl flex items-center justify-center gap-3 shadow-card"
       >
         <HandHeart className="w-5 h-5" />
         Sign me up
-        <ChevronRight className="w-5 h-5" />
+        <span className="ml-1 w-9 h-9 rounded-full bg-occ-green-dark flex items-center justify-center">
+          <ChevronRight className="w-5 h-5 text-white" />
+        </span>
       </motion.button>
       <p className="text-[11px] text-ink-light/80">
         Already volunteering this week? <Link to="/login" className="font-semibold text-sp-red underline">Sign in instead</Link>
