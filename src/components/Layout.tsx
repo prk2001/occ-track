@@ -18,6 +18,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/volunteers': 'Volunteers',
   '/clock': 'Clock In / Out',
   '/signup': 'Volunteer Sign-up',
+  '/signups': 'Signups & Schedule',
   '/states': 'States',
   '/settings': 'Settings',
 };

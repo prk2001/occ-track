@@ -74,24 +74,41 @@ export default function Volunteers() {
           <StatTile icon={Award} label="Roles" value={`${rolesCovered}/6`} color="text-purple-accent" bg="bg-purple-light" />
         </div>
 
-        {/* Quick Check-In Mode CTA — links to the standalone /clock page that
-            volunteers reach by scanning a QR posted at the welcome table */}
-        <Link
-          to="/clock?loc=cdo1"
-          className="flex items-center gap-4 bg-bg-card rounded-2xl border border-border-custom shadow-card p-4 hover:border-sp-red hover:shadow-card-elevated transition-all group"
-        >
-          <div className="w-14 h-14 rounded-2xl bg-sp-red-light flex items-center justify-center shrink-0">
-            <QrCode className="w-7 h-7 text-sp-red" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-sp-red mb-0.5">Quick Check-In Mode</p>
-            <p className="font-display text-base font-medium text-ink leading-tight">Volunteers clock in from their phone</p>
-            <p className="text-[11px] text-ink-light mt-0.5 italic">Print the QR — they scan it, tap their name, done.</p>
-          </div>
-          <div className="text-ink-light/40 group-hover:text-sp-red group-hover:translate-x-1 transition-all">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
-          </div>
-        </Link>
+        {/* Admin shortcuts: Quick Check-In QR (kiosk) + Signups & Schedule (planning) */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          <Link
+            to="/clock?loc=cdo1"
+            className="flex items-center gap-4 bg-bg-card rounded-2xl border border-border-custom shadow-card p-4 hover:border-sp-red hover:shadow-card-elevated transition-all group"
+          >
+            <div className="w-14 h-14 rounded-2xl bg-sp-red-light flex items-center justify-center shrink-0">
+              <QrCode className="w-7 h-7 text-sp-red" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-sp-red mb-0.5">Quick Check-In Mode</p>
+              <p className="font-display text-base text-ink leading-tight">Volunteers clock in from their phone</p>
+              <p className="text-[11px] text-ink-light mt-0.5 italic">Print the QR — they scan it, tap their name, done.</p>
+            </div>
+            <div className="text-ink-light/40 group-hover:text-sp-red group-hover:translate-x-1 transition-all shrink-0">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+            </div>
+          </Link>
+          <Link
+            to="/signups"
+            className="flex items-center gap-4 bg-bg-card rounded-2xl border border-border-custom shadow-card p-4 hover:border-occ-green hover:shadow-card-elevated transition-all group"
+          >
+            <div className="w-14 h-14 rounded-2xl bg-occ-green-light flex items-center justify-center shrink-0">
+              <Calendar className="w-7 h-7 text-occ-green" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-occ-green mb-0.5">Signups & Schedule</p>
+              <p className="font-display text-base text-ink leading-tight">Who's volunteering, what days are covered</p>
+              <p className="text-[11px] text-ink-light mt-0.5 italic">Block out days when a group has them. View pre-week signups.</p>
+            </div>
+            <div className="text-ink-light/40 group-hover:text-occ-green group-hover:translate-x-1 transition-all shrink-0">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+            </div>
+          </Link>
+        </div>
 
         {/* Role distribution */}
         <section className="bg-bg-card rounded-2xl shadow-card border border-border-custom p-5">

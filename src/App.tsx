@@ -12,6 +12,7 @@ import LiveTracker from '@/pages/LiveTracker';
 import Volunteers from '@/pages/Volunteers';
 import Clock from '@/pages/Clock';
 import VolunteerSignup from '@/pages/VolunteerSignup';
+import Signups from '@/pages/Signups';
 import States from '@/pages/States';
 import Settings from '@/pages/Settings';
 import NotFound from '@/pages/NotFound';
@@ -32,6 +33,7 @@ export default function App() {
         <Route path="/volunteers" element={<Volunteers />} />
         <Route path="/clock" element={<Clock />} />
         <Route path="/signup" element={<VolunteerSignup />} />
+        <Route path="/signups" element={<Signups />} />
         <Route path="/states" element={<States />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="*" element={<NotFound />} />
