@@ -13,6 +13,8 @@ import Volunteers from '@/pages/Volunteers';
 import Clock from '@/pages/Clock';
 import VolunteerSignup from '@/pages/VolunteerSignup';
 import Signups from '@/pages/Signups';
+import MySignup from '@/pages/MySignup';
+import AuditLog from '@/pages/AuditLog';
 import States from '@/pages/States';
 import Settings from '@/pages/Settings';
 import NotFound from '@/pages/NotFound';
@@ -34,6 +36,8 @@ export default function App() {
         <Route path="/clock" element={<Clock />} />
         <Route path="/signup" element={<VolunteerSignup />} />
         <Route path="/signups" element={<Signups />} />
+        <Route path="/my-signup" element={<MySignup />} />
+        <Route path="/audit-log" element={<AuditLog />} />
         <Route path="/states" element={<States />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="*" element={<NotFound />} />

@@ -167,6 +167,38 @@ export interface DayBlock {
   blockedAt: string;  // ISO timestamp when the block was created
 }
 
+// Single source of truth for a stored volunteer signup. Shared across the
+// public signup wizard (VolunteerSignup.tsx), the admin roster (Signups.tsx),
+// the magic-link self-edit page (MySignup.tsx), and the day-of attendance
+// kiosk (Clock.tsx). Lives in localStorage under 'occ:signups'.
+export type ShirtSize = 'S' | 'M' | 'L' | 'XL' | 'XXL';
+
+export interface StoredSignup {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  zip?: string;
+  firstTime: boolean | null;
+  shirtSize: ShirtSize | '';
+  emergencyName: string;
+  emergencyPhone: string;
+  notes: string;
+  submittedAt: string;
+  agree?: boolean;
+  // editToken: opaque capability URL secret. Possessing /my-signup?token=<this>
+  // grants edit rights on this single signup. Generated at submit time and
+  // never displayed back to leadership — only to the volunteer themselves.
+  editToken?: string;
+  // arrivedAt: set by a Greeter at the welcome table on Day 1 when the
+  // volunteer physically shows up. Powers the day-of attendance roster.
+  arrivedAt?: string;
+  // lastEditedAt + lastEditedBy: set when the volunteer (or admin) updates
+  // the signup via the self-service magic link or the admin page.
+  lastEditedAt?: string;
+  lastEditedBy?: 'self' | 'admin';
+}
+
 // ──────────────────────────────────────────────────────────────────────────────
 // ZIP code → city/state lookup
 // ──────────────────────────────────────────────────────────────────────────────

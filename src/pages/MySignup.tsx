@@ -1,0 +1,367 @@
+import { useMemo, useState } from 'react';
+import { Link, useSearchParams } from 'react-router';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  ShieldCheck, User, Phone, Mail, MapPin, Shield, Shirt, MessageCircle,
+  CheckCircle2, AlertCircle, Save, LogOut, Sparkles,
+} from 'lucide-react';
+import Layout from '@/components/Layout';
+import Logo from '@/components/Logo';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { logAuditEvent } from '@/lib/auditLog';
+import type { ShirtSize, StoredSignup } from '@/data/mockData';
+import { timeAgo } from '@/data/mockData';
+
+/**
+ * Volunteer self-service edit page.
+ *
+ * Access pattern: the volunteer arrives here via their unique magic link
+ * (the URL they were shown after submitting /signup). The `?token=...`
+ * query param IS the credential — possessing it grants edit rights on
+ * exactly one signup record. No login, no password, no account.
+ *
+ * Same model Doodle/Calendly/Eventbrite use for invitee edits. Real
+ * production deploy would harden this with:
+ *   - HTTPS-only (cookies + Origin checks)
+ *   - Token expiration (e.g. 90 days post-Collection Week)
+ *   - Rate limiting to prevent brute force on the token space
+ *   - Re-verification SMS for sensitive field changes (phone, email)
+ * For a prototype, the bare token model is the right abstraction.
+ */
+export default function MySignup() {
+  const [params] = useSearchParams();
+  const token = params.get('token') ?? '';
+  const [signups, setSignups] = useLocalStorage<StoredSignup[]>('occ:signups', []);
+  const [saved, setSaved] = useState(false);
+
+  // Find the signup by token. O(n) is fine — even a large CDO won't
+  // exceed ~200 signups in a season.
+  const signup = useMemo(
+    () => signups.find((s) => s.editToken && s.editToken === token),
+    [signups, token],
+  );
+
+  // Live-editing local draft. Init from the matched signup or empty if no match.
+  const [draft, setDraft] = useState(() =>
+    signup
+      ? {
+          name: signup.name,
+          email: signup.email,
+          phone: signup.phone,
+          zip: signup.zip ?? '',
+          shirtSize: signup.shirtSize as ShirtSize | '',
+          emergencyName: signup.emergencyName,
+          emergencyPhone: signup.emergencyPhone,
+          notes: signup.notes,
+        }
+      : null,
+  );
+
+  // No token at all — distinct from "token doesn't match anything"
+  if (!token) {
+    return <InvalidLinkPage reason="no-token" />;
+  }
+  // Token provided but didn't match — link expired or signup was deleted.
+  if (!signup || !draft) {
+    return <InvalidLinkPage reason="not-found" />;
+  }
+
+  function patch(p: Partial<NonNullable<typeof draft>>) {
+    setDraft((d) => (d ? { ...d, ...p } : d));
+  }
+
+  function save() {
+    if (!draft || !signup) return;
+    const now = new Date().toISOString();
+    const before = signup;
+    setSignups((prev) =>
+      prev.map((s) =>
+        s.id === signup.id
+          ? {
+              ...s,
+              name: draft.name.trim(),
+              email: draft.email.trim(),
+              phone: draft.phone.trim(),
+              zip: draft.zip.trim() || undefined,
+              shirtSize: draft.shirtSize,
+              emergencyName: draft.emergencyName.trim(),
+              emergencyPhone: draft.emergencyPhone.trim(),
+              notes: draft.notes.trim(),
+              lastEditedAt: now,
+              lastEditedBy: 'self',
+            }
+          : s,
+      ),
+    );
+
+    // Audit trail — record what changed so leadership can see "Maria
+    // updated her phone number" in the /audit-log viewer.
+    const changes: string[] = [];
+    if (before.name !== draft.name) changes.push('name');
+    if (before.email !== draft.email) changes.push('email');
+    if (before.phone !== draft.phone) changes.push('phone');
+    if ((before.zip ?? '') !== draft.zip) changes.push('zip');
+    if (before.shirtSize !== draft.shirtSize) changes.push('shirt');
+    if (before.emergencyName !== draft.emergencyName) changes.push('emergency name');
+    if (before.emergencyPhone !== draft.emergencyPhone) changes.push('emergency phone');
+    if (before.notes !== draft.notes) changes.push('notes');
+
+    logAuditEvent(
+      { id: 'volunteer-self', name: signup.name, role: 'volunteer_self' },
+      'volunteer_self_edit',
+      `signup:${signup.id}`,
+      changes.length > 0
+        ? `Updated fields: ${changes.join(', ')}`
+        : 'Saved (no changes)',
+    );
+
+    setSaved(true);
+    setTimeout(() => setSaved(false), 3000);
+  }
+
+  // Track dirty state so the Save button changes appearance when there
+  // are unsaved changes vs. when the draft matches the stored record.
+  const dirty =
+    draft.name !== signup.name ||
+    draft.email !== signup.email ||
+    draft.phone !== signup.phone ||
+    (draft.zip || '') !== (signup.zip || '') ||
+    draft.shirtSize !== signup.shirtSize ||
+    draft.emergencyName !== signup.emergencyName ||
+    draft.emergencyPhone !== signup.emergencyPhone ||
+    draft.notes !== signup.notes;
+
+  return (
+    <Layout hideNav>
+      <div className="relative min-h-[100dvh] overflow-hidden">
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute -top-40 -left-40 w-[420px] h-[420px] rounded-full bg-occ-green/8 blur-[120px]" />
+          <div className="absolute bottom-0 right-0 w-[440px] h-[440px] rounded-full bg-gold/10 blur-[120px]" />
+        </div>
+
+        <div className="relative px-5 pt-6 pb-12 max-w-2xl mx-auto">
+          {/* Top bar */}
+          <header className="flex items-center justify-between mb-6">
+            <Link to="/" aria-label="OCC Track home"><Logo size={28} /></Link>
+            <Link
+              to="/"
+              className="text-xs text-ink-light hover:text-sp-red flex items-center gap-1 transition-colors"
+            >
+              <LogOut className="w-4 h-4" />
+              Done
+            </Link>
+          </header>
+
+          {/* Hero */}
+          <div className="space-y-2 mb-6">
+            <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-occ-green flex items-center gap-1.5">
+              <ShieldCheck className="w-3 h-3" />
+              Volunteer Self-Service
+            </p>
+            <h1 className="font-display text-3xl sm:text-4xl text-ink leading-[1.05] tracking-tight">
+              Welcome back{signup.name ? `, ${signup.name.split(' ')[0]}` : ''}.
+              <span className="font-display-italic block text-occ-green mt-1">
+                Your signup details.
+              </span>
+            </h1>
+            <p className="text-sm text-ink-light italic">
+              Update anything that&apos;s changed. You signed up {timeAgo(signup.submittedAt)}
+              {signup.lastEditedAt && signup.lastEditedAt !== signup.submittedAt
+                ? ` · last updated ${timeAgo(signup.lastEditedAt)}`
+                : ''}.
+            </p>
+          </div>
+
+          {/* Saved flash */}
+          <AnimatePresence>
+            {saved && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="bg-occ-green-light border border-occ-green rounded-xl px-4 py-3 mb-4 flex items-center gap-2.5"
+              >
+                <CheckCircle2 className="w-5 h-5 text-occ-green shrink-0" />
+                <p className="text-sm text-occ-green-dark font-semibold">
+                  Saved. Your team lead will see the latest info.
+                </p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Edit form */}
+          <div className="bg-bg-card rounded-2xl shadow-card border border-border-custom p-5 space-y-4">
+            <Field
+              label="Your name"
+              icon={<User className="w-4 h-4" />}
+              value={draft.name}
+              onChange={(v) => patch({ name: v })}
+              placeholder="First and last"
+            />
+            <Field
+              label="Email"
+              icon={<Mail className="w-4 h-4" />}
+              value={draft.email}
+              onChange={(v) => patch({ email: v })}
+              placeholder="you@email.com"
+              type="email"
+            />
+            <Field
+              label="Phone"
+              icon={<Phone className="w-4 h-4" />}
+              value={draft.phone}
+              onChange={(v) => patch({ phone: v })}
+              placeholder="(404) 555-0101"
+              type="tel"
+            />
+            <Field
+              label="ZIP code (optional)"
+              icon={<MapPin className="w-4 h-4" />}
+              value={draft.zip}
+              onChange={(v) => patch({ zip: v.replace(/[^\d]/g, '').slice(0, 5) })}
+              placeholder="30301"
+              mono
+            />
+
+            <div className="pt-2">
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-ink-light mb-2 flex items-center gap-1.5">
+                <Shirt className="w-3 h-3" /> T-shirt size
+              </p>
+              <div className="grid grid-cols-5 gap-1.5">
+                {(['S', 'M', 'L', 'XL', 'XXL'] as ShirtSize[]).map((sz) => (
+                  <button
+                    key={sz}
+                    onClick={() => patch({ shirtSize: draft.shirtSize === sz ? '' : sz })}
+                    className={`h-10 rounded-lg text-xs font-bold transition-all border ${
+                      draft.shirtSize === sz
+                        ? 'bg-ink text-bg-card border-ink'
+                        : 'bg-bg-card text-ink-light border-border-custom hover:border-ink/40'
+                    }`}
+                  >
+                    {sz}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-3 pt-2">
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-ink-light flex items-center gap-1.5">
+                <Shield className="w-3 h-3" /> Emergency contact
+              </p>
+              <Field
+                label="Name"
+                value={draft.emergencyName}
+                onChange={(v) => patch({ emergencyName: v })}
+                placeholder="Someone we can reach in an emergency"
+              />
+              <Field
+                label="Phone"
+                type="tel"
+                value={draft.emergencyPhone}
+                onChange={(v) => patch({ emergencyPhone: v })}
+                placeholder="(404) 555-0101"
+              />
+            </div>
+
+            <div className="pt-2">
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-ink-light mb-1.5 flex items-center gap-1.5">
+                <MessageCircle className="w-3 h-3" /> Notes for your team lead
+              </p>
+              <textarea
+                value={draft.notes}
+                onChange={(e) => patch({ notes: e.target.value })}
+                rows={3}
+                placeholder="Bringing my kids · I have a van for transport · I'm available for setup the day before · ..."
+                className="w-full px-4 py-3 bg-bg-primary border border-border-custom rounded-xl text-sm text-ink placeholder:text-ink-light/60 focus:outline-none focus:border-sp-red transition-colors resize-none"
+              />
+            </div>
+          </div>
+
+          <button
+            onClick={save}
+            disabled={!dirty}
+            className={`w-full h-14 mt-5 text-white text-base font-semibold rounded-2xl flex items-center justify-center gap-2 transition-colors shadow-card ${
+              dirty
+                ? 'bg-occ-green hover:bg-occ-green-dark'
+                : 'bg-ink-light/40 cursor-default'
+            }`}
+          >
+            <Save className="w-5 h-5" />
+            {dirty ? 'Save changes' : 'Nothing to save'}
+          </button>
+
+          <p className="text-[11px] text-ink-light italic text-center mt-3 max-w-sm mx-auto">
+            Your edits go straight to your Central Drop-off Leader. They&apos;ll see
+            the most current info when they plan the week.
+          </p>
+        </div>
+      </div>
+    </Layout>
+  );
+}
+
+// ─── Invalid link page ────────────────────────────────────────────────────
+function InvalidLinkPage({ reason }: { reason: 'no-token' | 'not-found' }) {
+  return (
+    <Layout hideNav>
+      <div className="relative min-h-[100dvh]">
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[420px] h-[420px] rounded-full bg-sp-red/6 blur-[120px]" />
+        </div>
+        <div className="relative px-5 pt-12 pb-12 max-w-md mx-auto text-center">
+          <Logo size={32} className="mx-auto mb-8" />
+          <div className="w-16 h-16 mx-auto bg-sp-red-light rounded-full flex items-center justify-center mb-4">
+            <AlertCircle className="w-8 h-8 text-sp-red" />
+          </div>
+          <h1 className="font-display text-3xl text-ink leading-[1.1] tracking-tight">
+            {reason === 'no-token' ? 'Link missing.' : 'Link expired.'}
+            <span className="font-display-italic block text-sp-red mt-1">
+              {reason === 'no-token' ? "We can't find your signup." : 'Or your signup was removed.'}
+            </span>
+          </h1>
+          <p className="text-sm text-ink-light mt-4 italic leading-relaxed">
+            {reason === 'no-token'
+              ? 'This page only works through your personal edit link. Check the link in the email or message you received after you signed up.'
+              : 'The link you used no longer matches an active signup. If you think this is a mistake, contact your Central Drop-off Leader.'}
+          </p>
+          <Link
+            to="/signup"
+            className="inline-flex h-12 px-5 mt-6 bg-sp-red text-white text-sm font-semibold rounded-xl items-center justify-center hover:bg-sp-red-dark transition-colors gap-1.5"
+          >
+            <Sparkles className="w-4 h-4" />
+            Sign up fresh
+          </Link>
+        </div>
+      </div>
+    </Layout>
+  );
+}
+
+// ─── Field primitive (mirrors VolunteerSignup pattern) ────────────────────
+function Field({
+  label, icon, value, onChange, placeholder, type, mono,
+}: {
+  label: string;
+  icon?: React.ReactNode;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  type?: 'text' | 'tel' | 'email';
+  mono?: boolean;
+}) {
+  return (
+    <label className="block">
+      <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-ink-light mb-1.5 flex items-center gap-1.5">
+        {icon && <span className="text-ink-light/60">{icon}</span>}
+        {label}
+      </span>
+      <input
+        type={type ?? 'text'}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className={`w-full h-12 px-4 bg-bg-primary border border-border-custom rounded-xl text-base text-ink placeholder:text-ink-light/50 focus:outline-none focus:border-sp-red transition-colors ${mono ? 'font-mono tabular-nums' : ''}`}
+      />
+    </label>
+  );
+}

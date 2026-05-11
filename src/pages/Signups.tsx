@@ -1,10 +1,11 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ClipboardList, Calendar, Users, Lock, Unlock, CalendarOff, Plus, X, Phone, Mail,
   CheckCircle2, AlertCircle, Shield, Sparkles, ChevronRight, MessageCircle, Trash2,
   Pencil, Search, Mail as MailIcon, RotateCcw, Printer, Download, ArrowDownAZ, ArrowDown01,
+  UserCheck, UserX,
 } from 'lucide-react';
 import Layout from '@/components/Layout';
 import { useAuth } from '@/hooks/useAuth';
@@ -16,23 +17,8 @@ import {
   getLocationById,
   timeAgo,
 } from '@/data/mockData';
-import type { DayBlock } from '@/data/mockData';
-
-// Mirrors StoredSignup from VolunteerSignup.tsx. Consumer-only here.
-interface StoredSignup {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  zip?: string;
-  firstTime: boolean | null;
-  shirtSize: string;
-  emergencyName: string;
-  emergencyPhone: string;
-  notes: string;
-  submittedAt: string;
-  agree?: boolean;
-}
+import type { DayBlock, StoredSignup } from '@/data/mockData';
+import { logAuditEvent } from '@/lib/auditLog';
 
 // Seed: Saturday is often covered by a youth group. Demos the blocked
 // state on first load; user can clear via Reopen.
@@ -55,6 +41,28 @@ export default function Signups() {
   const [editingTimeDate, setEditingTimeDate] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'name'>('newest');
+
+  // Actor context — every audit event needs to know who did it. Memoized so
+  // we don't rebuild a new object on every render that would invalidate the
+  // effect dependency below.
+  const actor = useMemo(
+    () =>
+      user
+        ? { id: user.id, name: user.name, role: user.role }
+        : { id: 'anonymous', name: 'Unknown', role: 'greeter' as const },
+    [user],
+  );
+
+  // Log "viewed signups" once per mount per role — not on every re-render.
+  // We use a ref guard rather than an effect dependency on `signups.length`
+  // because that would fire again whenever someone removes a signup.
+  const viewLogged = useRef(false);
+  useEffect(() => {
+    if (isRegionalAdmin && !viewLogged.current && user) {
+      logAuditEvent(actor, 'view_signups', `signups:count=${signups.length}`);
+      viewLogged.current = true;
+    }
+  }, [isRegionalAdmin, user, actor, signups.length]);
 
   function downloadCSV() {
     if (signups.length === 0) return;
@@ -86,21 +94,27 @@ export default function Signups() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+    logAuditEvent(actor, 'export_csv', undefined, `Exported ${signups.length} signup rows`);
   }
 
   function updateDayTime(date: string, value: string) {
+    const prevTime = dayTimes[date] ?? '(unset)';
     setDayTimes((prev) => ({ ...prev, [date]: value }));
     setEditingTimeDate(null);
+    logAuditEvent(actor, 'edit_day_time', `day:${date}`, `Changed shift hours from "${prevTime}" to "${value}"`);
   }
 
   function resetDayTimes() {
     setDayTimes(DEFAULT_DAY_TIMES);
+    logAuditEvent(actor, 'reset_day_times', undefined, 'Reset all shift hours to defaults');
   }
 
   function clearAllSignups() {
     if (signups.length === 0) return;
     if (confirm(`Remove all ${signups.length} signups? This cannot be undone.`)) {
+      const count = signups.length;
       setSignups([]);
+      logAuditEvent(actor, 'clear_all_signups', undefined, `Cleared ${count} signups`);
     }
   }
 
@@ -108,6 +122,7 @@ export default function Signups() {
     const emails = signups.map((s) => s.email).filter(Boolean).join(',');
     if (!emails) return;
     window.location.href = `mailto:?bcc=${encodeURIComponent(emails)}&subject=${encodeURIComponent('Collection Week 2026 — Volunteer Update')}`;
+    logAuditEvent(actor, 'email_all', undefined, `Opened mailto: with ${signups.length} BCC recipients`);
   }
 
   const filteredSignups = signups
@@ -135,19 +150,55 @@ export default function Signups() {
     const newBlock: DayBlock = { date, coveredBy: coveredBy.trim(), note: note.trim() || undefined, blockedAt: new Date().toISOString() };
     setBlocks((prev) => [...prev.filter((b) => b.date !== date), newBlock]);
     setBlockingDate(null);
+    logAuditEvent(actor, 'block_day', `day:${date}`, `Covered by "${coveredBy.trim()}"${note.trim() ? ` — ${note.trim()}` : ''}`);
   }
 
   function reopenDay(date: string) {
+    const prevBlock = blocks.find((b) => b.date === date);
     setBlocks((prev) => prev.filter((b) => b.date !== date));
+    logAuditEvent(actor, 'reopen_day', `day:${date}`, prevBlock ? `Was covered by "${prevBlock.coveredBy}"` : undefined);
   }
 
   function removeSignup(id: string) {
+    const removed = signups.find((s) => s.id === id);
     setSignups((prev) => prev.filter((s) => s.id !== id));
+    if (removed) {
+      logAuditEvent(actor, 'remove_signup', `signup:${id}`, `Removed ${removed.name} (${removed.email})`);
+    }
+  }
+
+  function markArrived(id: string) {
+    const now = new Date().toISOString();
+    const target = signups.find((s) => s.id === id);
+    setSignups((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, arrivedAt: now } : s)),
+    );
+    if (target) {
+      logAuditEvent(actor, 'mark_arrived', `signup:${id}`, `Marked ${target.name} as arrived at the welcome table`);
+    }
+  }
+
+  function unmarkArrived(id: string) {
+    const target = signups.find((s) => s.id === id);
+    setSignups((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, arrivedAt: undefined } : s)),
+    );
+    if (target) {
+      logAuditEvent(actor, 'unmark_arrived', `signup:${id}`, `Unmarked ${target.name} arrival`);
+    }
   }
 
   const openDays = COLLECTION_DAYS.length - blocks.length;
   const upcomingDays = COLLECTION_DAYS.filter((_, i) => i + 1 >= COLLECTION_DAY).length;
   const upcomingOpenDays = COLLECTION_DAYS.filter((d, i) => i + 1 >= COLLECTION_DAY && !blocksByDate.has(d.date)).length;
+
+  // Day-of attendance: how many signed-up volunteers have shown up today?
+  // The demo treats today as COLLECTION_DAYS[COLLECTION_DAY-1].date (Thu Nov 19).
+  const todayISODate = COLLECTION_DAYS[COLLECTION_DAY - 1]?.date ?? new Date().toISOString().slice(0, 10);
+  const arrivedToday = signups.filter(
+    (s) => s.arrivedAt && s.arrivedAt.slice(0, 10) === todayISODate,
+  ).length;
+  const arrivalRate = signups.length === 0 ? 0 : Math.round((arrivedToday / signups.length) * 100);
 
   return (
     <Layout>
@@ -162,21 +213,39 @@ export default function Signups() {
             Collection Week 2026 · November 16–23 · {signups.length} signups
           </p>
         </div>
-        {/* Hero */}
+        {/* Hero — leadership view shows live counts; everyone else gets a
+            neutral header so aggregate signup data isn't leaked through
+            the page chrome. */}
         <header className="flex items-start justify-between gap-3">
           <div className="space-y-2 pt-1">
             <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-sp-red">
               Signups & Schedule
             </p>
-            <h1 className="font-display text-3xl sm:text-4xl text-ink leading-[1.05] tracking-tight">
-              Plan the week.
-              <span className="font-display-italic block text-sp-red mt-1">
-                {signups.length} {signups.length === 1 ? 'volunteer' : 'volunteers'} ready.
-              </span>
-            </h1>
-            <p className="text-sm text-ink-light italic">
-              {cdoLabel} · {upcomingOpenDays} of {upcomingDays} upcoming days still open for signups
-            </p>
+            {isRegionalAdmin ? (
+              <>
+                <h1 className="font-display text-3xl sm:text-4xl text-ink leading-[1.05] tracking-tight">
+                  Plan the week.
+                  <span className="font-display-italic block text-sp-red mt-1">
+                    {signups.length} {signups.length === 1 ? 'volunteer' : 'volunteers'} ready.
+                  </span>
+                </h1>
+                <p className="text-sm text-ink-light italic">
+                  {cdoLabel} · {upcomingOpenDays} of {upcomingDays} upcoming days still open for signups
+                </p>
+              </>
+            ) : (
+              <>
+                <h1 className="font-display text-3xl sm:text-4xl text-ink leading-[1.05] tracking-tight">
+                  Restricted area.
+                  <span className="font-display-italic block text-sp-red mt-1">
+                    Volunteer information is private.
+                  </span>
+                </h1>
+                <p className="text-sm text-ink-light italic">
+                  Only Samaritan&apos;s Purse leadership can see who&apos;s signed up.
+                </p>
+              </>
+            )}
           </div>
           <span className="text-[10px] font-bold text-sp-red bg-sp-red-light px-2 py-1 rounded-full uppercase tracking-wider whitespace-nowrap shrink-0 mt-1 print-hide">
             SP Leadership Only
@@ -190,10 +259,22 @@ export default function Signups() {
             {/* Stats */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 print-hide">
               <StatTile icon={ClipboardList} label="Pending Signups" value={String(signups.length)} bg="bg-sp-red-light" color="text-sp-red" />
-              <StatTile icon={Unlock} label="Open Days" value={String(openDays)} bg="bg-occ-green-light" color="text-occ-green" />
+              <StatTile icon={UserCheck} label="Arrived Today" value={`${arrivedToday}${signups.length > 0 ? ` (${arrivalRate}%)` : ''}`} bg="bg-occ-green-light" color="text-occ-green" />
+              <StatTile icon={Unlock} label="Open Days" value={String(openDays)} bg="bg-blue-light" color="text-blue-accent" />
               <StatTile icon={Lock} label="Covered Days" value={String(blocks.length)} bg="bg-gold-light" color="text-gold" />
-              <StatTile icon={Calendar} label="Total Days" value={String(COLLECTION_DAYS.length)} bg="bg-blue-light" color="text-blue-accent" />
             </div>
+
+            {/* Day-of attendance — only renders during Collection Week when
+                signups exist. Lets the Greeter at the welcome table check
+                volunteers off as they arrive. */}
+            {signups.length > 0 && (
+              <AttendanceSection
+                signups={signups}
+                onMarkArrived={markArrived}
+                onUnmarkArrived={unmarkArrived}
+                todayISODate={todayISODate}
+              />
+            )}
 
             {/* Day schedule section */}
             <section className="print-hide">
@@ -261,7 +342,10 @@ export default function Signups() {
                       CSV
                     </button>
                     <button
-                      onClick={() => window.print()}
+                      onClick={() => {
+                        logAuditEvent(actor, 'print_roster', undefined, `Printed roster with ${signups.length} signups`);
+                        window.print();
+                      }}
                       className="h-9 px-3 bg-bg-primary border border-border-custom hover:border-occ-green hover:text-occ-green text-ink-light text-xs font-bold rounded-xl flex items-center gap-1.5 uppercase tracking-wider transition-all"
                     >
                       <Printer className="w-3 h-3" />
@@ -506,11 +590,21 @@ function SignupCard({ signup, onRemove }: { signup: StoredSignup; onRemove: () =
               <h3 className="font-display text-base text-ink truncate leading-tight">{signup.name}</h3>
               <p className="text-[11px] text-ink-light mt-0.5">Signed up {timeAgo(signup.submittedAt)}</p>
             </div>
-            {signup.firstTime && (
-              <span className="text-[9px] font-bold uppercase tracking-wider text-lime-dark bg-lime-light px-2 py-0.5 rounded-full whitespace-nowrap">
-                First-Timer
-              </span>
-            )}
+            <div className="flex flex-col items-end gap-1 shrink-0">
+              {signup.firstTime && (
+                <span className="text-[9px] font-bold uppercase tracking-wider text-lime-dark bg-lime-light px-2 py-0.5 rounded-full whitespace-nowrap">
+                  First-Timer
+                </span>
+              )}
+              {signup.lastEditedBy === 'self' && signup.lastEditedAt && (
+                <span
+                  className="text-[9px] font-bold uppercase tracking-wider text-occ-green bg-occ-green-light px-2 py-0.5 rounded-full whitespace-nowrap"
+                  title={`Volunteer self-edited via magic link · ${new Date(signup.lastEditedAt).toLocaleString()}`}
+                >
+                  Self-edited · {timeAgo(signup.lastEditedAt)}
+                </span>
+              )}
+            </div>
           </div>
 
           <div className="mt-3 grid grid-cols-1 gap-1.5 text-[11px]">
@@ -579,6 +673,135 @@ function StatTile({ icon: Icon, label, value, bg, color }: { icon: typeof Clipbo
       <p className={`font-display text-2xl ${color} tabular-nums leading-none`}>{value}</p>
       <p className="text-[10px] text-ink-light mt-1 uppercase tracking-wider">{label}</p>
     </div>
+  );
+}
+
+// ─── Day-of attendance ─────────────────────────────────────────────────────
+// Live tally of who's arrived at the welcome table today. The Greeter taps
+// each volunteer as they walk in. Default open when nobody has arrived yet
+// (i.e., the start of the day); collapsible once a few are marked.
+function AttendanceSection({
+  signups, onMarkArrived, onUnmarkArrived, todayISODate,
+}: {
+  signups: StoredSignup[];
+  onMarkArrived: (id: string) => void;
+  onUnmarkArrived: (id: string) => void;
+  todayISODate: string;
+}) {
+  // Sort: not-yet-arrived first (so greeter can tap quickly), then arrived
+  // in descending arrival order (most recent on top).
+  const sorted = [...signups].sort((a, b) => {
+    const aArrived = !!a.arrivedAt;
+    const bArrived = !!b.arrivedAt;
+    if (aArrived !== bArrived) return aArrived ? 1 : -1;
+    if (aArrived && bArrived) {
+      return (b.arrivedAt ?? '').localeCompare(a.arrivedAt ?? '');
+    }
+    return a.name.localeCompare(b.name);
+  });
+  const arrivedCount = signups.filter(
+    (s) => s.arrivedAt && s.arrivedAt.slice(0, 10) === todayISODate,
+  ).length;
+  const pendingCount = signups.length - arrivedCount;
+
+  return (
+    <section className="print-hide">
+      <header className="mb-3 flex items-center justify-between gap-3 flex-wrap">
+        <div>
+          <h2 className="font-display text-xl text-ink leading-tight flex items-center gap-2">
+            <UserCheck className="w-5 h-5 text-occ-green" />
+            Welcome Table
+          </h2>
+          <p className="text-xs text-ink-light italic mt-1">
+            Tap each volunteer as they arrive. {arrivedCount} of {signups.length} checked in today.
+          </p>
+        </div>
+        <Link
+          to="/clock"
+          className="text-[10px] font-bold uppercase tracking-wider text-sp-red hover:underline flex items-center gap-1"
+        >
+          Open kiosk mode
+          <ChevronRight className="w-3 h-3" />
+        </Link>
+      </header>
+      <div className="bg-bg-card rounded-2xl border border-border-custom overflow-hidden">
+        {/* Progress bar — visual gauge of attendance rate */}
+        <div className="h-1.5 bg-bg-primary w-full overflow-hidden">
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: `${signups.length === 0 ? 0 : (arrivedCount / signups.length) * 100}%` }}
+            transition={{ duration: 0.5, ease: 'easeOut' }}
+            className="h-full bg-occ-green"
+          />
+        </div>
+        <ul className="divide-y divide-border-custom/60 max-h-96 overflow-y-auto">
+          {sorted.map((s) => {
+            const arrived = !!s.arrivedAt && s.arrivedAt.slice(0, 10) === todayISODate;
+            const arrivedTime = s.arrivedAt
+              ? new Date(s.arrivedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+              : null;
+            return (
+              <li
+                key={s.id}
+                className={`flex items-center gap-3 px-4 py-2.5 ${
+                  arrived ? 'bg-occ-green-light/40' : ''
+                }`}
+              >
+                <div
+                  className={`w-9 h-9 rounded-full flex items-center justify-center font-display text-sm leading-none shrink-0 ${
+                    arrived ? 'bg-occ-green text-white' : 'bg-sp-red text-white'
+                  }`}
+                >
+                  {arrived ? <CheckCircle2 className="w-4 h-4" /> : s.name.charAt(0).toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-ink truncate">{s.name}</p>
+                  <p className="text-[11px] text-ink-light truncate">
+                    {arrived ? (
+                      <>
+                        Arrived <span className="font-semibold text-occ-green">{arrivedTime}</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="tabular-nums">{s.phone}</span>
+                        {s.firstTime ? <span className="text-lime-dark"> · First-Timer</span> : null}
+                      </>
+                    )}
+                  </p>
+                </div>
+                {arrived ? (
+                  <button
+                    onClick={() => onUnmarkArrived(s.id)}
+                    className="h-9 px-3 bg-bg-primary border border-border-custom hover:border-sp-red hover:text-sp-red text-ink-light text-xs font-bold rounded-lg flex items-center gap-1.5 uppercase tracking-wider transition-all"
+                    title="Undo arrival"
+                  >
+                    <UserX className="w-3 h-3" />
+                    Undo
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => onMarkArrived(s.id)}
+                    className="h-9 px-3 bg-lime hover:bg-lime-dark text-occ-green-dark hover:text-white text-xs font-bold rounded-lg flex items-center gap-1.5 uppercase tracking-wider transition-colors"
+                  >
+                    <UserCheck className="w-3 h-3" />
+                    Arrived
+                  </button>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+        {pendingCount === 0 && signups.length > 0 && (
+          <div className="p-4 bg-occ-green-light/50 text-center border-t border-border-custom/60">
+            <p className="text-sm font-display text-occ-green-dark">
+              <CheckCircle2 className="w-4 h-4 inline -mt-0.5 mr-1" />
+              Everyone&apos;s here.
+            </p>
+            <p className="text-[11px] text-ink-light italic mt-0.5">Full house — go pack some boxes.</p>
+          </div>
+        )}
+      </div>
+    </section>
   );
 }
 

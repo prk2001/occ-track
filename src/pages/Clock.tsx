@@ -8,13 +8,16 @@ import Layout from '@/components/Layout';
 import { Mark } from '@/components/Logo';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import {
+  COLLECTION_DAY,
+  COLLECTION_DAYS,
   LOCATIONS,
   VOLUNTEERS,
   VOLUNTEER_ROLE_CONFIG,
   getLocationById,
   getVolunteersForLocation,
 } from '@/data/mockData';
-import type { Volunteer } from '@/data/mockData';
+import type { StoredSignup, Volunteer } from '@/data/mockData';
+import { logAuditEvent } from '@/lib/auditLog';
 
 type Step = 'location' | 'volunteer' | 'action' | 'done';
 type Action = 'in' | 'out';
@@ -44,7 +47,29 @@ export default function Clock() {
 
   const [checkedIn, setCheckedIn] = useLocalStorage<string[]>('occ:volunteer-checkins', ['v1', 'v3', 'v5', 'v7', 'v11']);
   const [history, setHistory] = useLocalStorage<ClockEvent[]>('occ:clock-history', []);
+  const [signups, setSignups] = useLocalStorage<StoredSignup[]>('occ:signups', []);
   const [doneAt, setDoneAt] = useState<string>('');
+
+  // Walk-up community volunteers who signed up via /signup. Show them in
+  // the kiosk so they can tap their own name on arrival — without the
+  // Greeter having to know who's regular church team vs. who's walk-up.
+  const todayISODate = COLLECTION_DAYS[COLLECTION_DAY - 1]?.date ?? new Date().toISOString().slice(0, 10);
+  const signupsToday = signups.filter((s) => !s.arrivedAt || s.arrivedAt.slice(0, 10) !== todayISODate);
+  const arrivedSignups = signups.filter((s) => s.arrivedAt && s.arrivedAt.slice(0, 10) === todayISODate);
+
+  function markSignupArrived(signupId: string) {
+    const now = new Date().toISOString();
+    const target = signups.find((s) => s.id === signupId);
+    setSignups((prev) => prev.map((s) => (s.id === signupId ? { ...s, arrivedAt: now } : s)));
+    if (target) {
+      logAuditEvent(
+        { id: 'volunteer-self', name: target.name, role: 'volunteer_self' },
+        'mark_arrived',
+        `signup:${signupId}`,
+        `Self-checked in at welcome table kiosk`,
+      );
+    }
+  }
 
   const location = locationId ? getLocationById(locationId) : null;
   const volunteers = useMemo(
@@ -113,6 +138,9 @@ export default function Clock() {
                 location={location}
                 volunteers={volunteers}
                 checkedIn={checkedIn}
+                signupsToday={signupsToday}
+                arrivedSignups={arrivedSignups}
+                onMarkSignupArrived={markSignupArrived}
                 onPick={(v) => {
                   setVolunteer(v);
                   setAction(checkedIn.includes(v.id) ? 'out' : 'in');
@@ -275,11 +303,15 @@ function FakeQR() {
 
 // ─── Step 2: Pick the volunteer ───────────────────────────────────────────────
 function VolunteerStep({
-  location, volunteers, checkedIn, onPick, onBack, allowBack,
+  location, volunteers, checkedIn, signupsToday, arrivedSignups,
+  onMarkSignupArrived, onPick, onBack, allowBack,
 }: {
   location: NonNullable<ReturnType<typeof getLocationById>>;
   volunteers: Volunteer[];
   checkedIn: string[];
+  signupsToday: StoredSignup[];
+  arrivedSignups: StoredSignup[];
+  onMarkSignupArrived: (id: string) => void;
   onPick: (v: Volunteer) => void;
   onBack: () => void;
   allowBack: boolean;
@@ -345,6 +377,65 @@ function VolunteerStep({
             );
           })}
         </motion.ul>
+      )}
+
+      {/* Walk-up signups — community volunteers who signed up via /signup.
+          They tap their name on arrival; this marks `arrivedAt` on their
+          stored signup record so the admin /signups page shows them as
+          present at the welcome table. */}
+      {(signupsToday.length > 0 || arrivedSignups.length > 0) && (
+        <div className="bg-bg-card rounded-2xl border border-border-custom overflow-hidden">
+          <header className="px-4 py-3 border-b border-border-custom/60 bg-bg-cream/40">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-sp-red">
+              Walk-Up Signups · Today
+            </p>
+            <p className="text-[11px] text-ink-light italic mt-0.5">
+              {signupsToday.length === 0
+                ? 'All signed-up volunteers have arrived.'
+                : `Tap your name when you arrive. ${signupsToday.length} expected.`}
+            </p>
+          </header>
+          <ul className="divide-y divide-border-custom/40">
+            {signupsToday.map((s) => (
+              <li key={s.id}>
+                <button
+                  onClick={() => onMarkSignupArrived(s.id)}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-lime-light transition-colors group"
+                >
+                  <div className="w-10 h-10 rounded-full bg-sp-red text-white flex items-center justify-center font-display text-base shrink-0">
+                    {s.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-ink truncate">{s.name}</p>
+                    <p className="text-[11px] text-ink-light truncate">
+                      {s.firstTime ? <span className="text-lime-dark font-semibold">First-Timer · </span> : null}
+                      Tap to check in
+                    </p>
+                  </div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-occ-green opacity-0 group-hover:opacity-100 transition-opacity">
+                    Arrived →
+                  </span>
+                </button>
+              </li>
+            ))}
+            {arrivedSignups.map((s) => {
+              const t = s.arrivedAt
+                ? new Date(s.arrivedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+                : '';
+              return (
+                <li key={s.id} className="flex items-center gap-3 px-4 py-3 bg-occ-green-light/40">
+                  <div className="w-10 h-10 rounded-full bg-occ-green text-white flex items-center justify-center shrink-0">
+                    <CheckCircle2 className="w-5 h-5" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-ink truncate">{s.name}</p>
+                    <p className="text-[11px] text-occ-green-dark font-semibold">Arrived {t}</p>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
       )}
     </motion.section>
   );

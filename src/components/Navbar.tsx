@@ -13,7 +13,7 @@ interface NavbarProps {
 const DEMO_ROLES: UserRole[] = ['super_admin', 'admin', 'regional', 'cdo_leader', 'do_leader', 'greeter'];
 
 export default function Navbar({ title }: NavbarProps) {
-  const { user, logout, switchRole, isRegionalAdmin } = useAuth();
+  const { user, logout, switchRole, isRegionalAdmin, isSuperAdmin } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
 
@@ -34,6 +34,9 @@ export default function Navbar({ title }: NavbarProps) {
     // Signups & Schedule contains individual volunteer PII — only visible
     // to Regional Admin, SP Admin, and Super Admin.
     ...(isRegionalAdmin ? [{ label: 'Signups & Schedule', path: '/signups', icon: 'signups' }] : []),
+    // Audit log: who saw what + when. National HQ only — this is the
+    // "watch the watchers" view that proves data governance is real.
+    ...(isSuperAdmin ? [{ label: 'Audit Log', path: '/audit-log', icon: 'audit' }] : []),
     { label: 'Settings', path: '/settings', icon: 'settings' },
   ];
 

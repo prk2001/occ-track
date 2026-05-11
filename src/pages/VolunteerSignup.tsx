@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   HandHeart, ChevronLeft, ChevronRight, X, User, Phone, Mail, MapPin,
   CheckCircle2, Sparkles, Shield, Shirt, MessageCircle, CalendarDays, Lock,
+  Link2, Copy, Check,
 } from 'lucide-react';
 import Layout from '@/components/Layout';
 import Logo from '@/components/Logo';
@@ -17,7 +18,8 @@ import {
   COLLECTION_WEEK_START,
   COLLECTION_WEEK_END,
 } from '@/data/mockData';
-import type { DayBlock } from '@/data/mockData';
+import type { DayBlock, ShirtSize, StoredSignup } from '@/data/mockData';
+import { logAuditEvent } from '@/lib/auditLog';
 
 // Note on roles: in real OCC practice, volunteers sign up just to *serve* —
 // the Central Drop-off Leader assigns specific roles (Greeter, Counter,
@@ -25,7 +27,6 @@ import type { DayBlock } from '@/data/mockData';
 // volunteers never get OCC Track app access; only Greeters use the app
 // at the welcome table for check-ins.
 type Step = 'intro' | 'contact' | 'details' | 'done';
-type ShirtSize = 'S' | 'M' | 'L' | 'XL' | 'XXL';
 
 interface SignupDraft {
   name: string;
@@ -38,11 +39,6 @@ interface SignupDraft {
   emergencyPhone: string;
   notes: string;
   agree: boolean;
-}
-
-interface StoredSignup extends SignupDraft {
-  id: string;
-  submittedAt: string;
 }
 
 const EMPTY_DRAFT: SignupDraft = {
@@ -79,10 +75,31 @@ export default function VolunteerSignup() {
 
   function submit() {
     const id = newId();
-    const stored: StoredSignup = { ...draft, id, submittedAt: new Date().toISOString() };
+    // editToken: an unguessable capability URL secret. Volunteer gets it in
+    // the success step; admins never see it on the roster. crypto.randomUUID
+    // gives us ~122 bits of entropy — fine for a prototype, and the right
+    // abstraction even if a production deploy would swap for a signed JWT.
+    const editToken =
+      typeof crypto !== 'undefined' && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `tok_${Date.now()}_${Math.random().toString(36).slice(2, 12)}`;
+    const stored: StoredSignup = {
+      ...draft,
+      id,
+      submittedAt: new Date().toISOString(),
+      editToken,
+    };
     setSignups((prev) => [stored, ...prev]);
     setSubmittedId(id);
     setStep('done');
+    // Audit trail: every new signup is logged so leadership can see
+    // creation events alongside views/edits on /audit-log.
+    logAuditEvent(
+      { id: 'volunteer-self', name: stored.name, role: 'volunteer_self' },
+      'volunteer_signup_created',
+      `signup:${id}`,
+      `New signup from ${stored.email}`,
+    );
   }
 
   // Step gating
@@ -518,6 +535,8 @@ function DoneStep({ signup, onAnother }: { signup?: StoredSignup; onAnother: () 
         <SummaryLine label="Shirt" value={signup?.shirtSize || '—'} />
       </div>
 
+      {signup?.editToken && <MagicLinkCard token={signup.editToken} />}
+
       <p className="text-sm text-ink-light italic">
         Until then, share with a friend: <span className="text-sp-red font-semibold">samaritanspurse.org/occ</span>
       </p>
@@ -531,6 +550,69 @@ function DoneStep({ signup, onAnother }: { signup?: StoredSignup; onAnother: () 
         </Link>
       </div>
     </motion.section>
+  );
+}
+
+// ─── Magic link card ─────────────────────────────────────────────────────
+// Shows the volunteer their personal edit URL with copy-to-clipboard.
+// Possession of this URL = edit rights on the signup, no password needed.
+// Real production deploy would also email/SMS this link so it isn't lost
+// if the user closes the tab before saving it.
+function MagicLinkCard({ token }: { token: string }) {
+  const [copied, setCopied] = useState(false);
+  // Build the URL from window.location.origin so it works regardless of
+  // where the app is hosted (GitHub Pages, Netlify, localhost, etc.).
+  // HashRouter means we have to use /#/my-signup, not /my-signup.
+  const origin =
+    typeof window !== 'undefined' ? window.location.origin + window.location.pathname.replace(/\/$/, '') : '';
+  const url = `${origin}#/my-signup?token=${token}`;
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Fallback: select the text. Some browsers block writeText without HTTPS.
+      const el = document.querySelector<HTMLInputElement>('#magic-link-input');
+      if (el) { el.select(); el.setSelectionRange(0, 99999); }
+    }
+  }
+
+  return (
+    <div className="bg-lime-light border-2 border-lime rounded-2xl p-5 max-w-md mx-auto text-left space-y-3">
+      <div className="flex items-center gap-2">
+        <Link2 className="w-4 h-4 text-occ-green-dark" />
+        <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-occ-green-dark">
+          Your personal edit link
+        </p>
+      </div>
+      <p className="text-xs text-ink leading-relaxed">
+        Bookmark this — it&apos;s your way back in. Update your phone, shirt size,
+        or notes anytime. <strong>Don&apos;t share it</strong>; anyone with the link
+        can edit your signup.
+      </p>
+      <div className="flex gap-2">
+        <input
+          id="magic-link-input"
+          readOnly
+          value={url}
+          className="flex-1 h-10 px-3 text-[11px] font-mono bg-white border border-lime rounded-lg text-ink-light truncate focus:outline-none focus:border-occ-green"
+          onClick={(e) => (e.currentTarget as HTMLInputElement).select()}
+        />
+        <button
+          onClick={copy}
+          className={`h-10 px-3 text-xs font-bold uppercase tracking-wider rounded-lg flex items-center gap-1.5 transition-colors ${
+            copied
+              ? 'bg-occ-green text-white'
+              : 'bg-occ-green-dark text-white hover:bg-occ-green'
+          }`}
+        >
+          {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+          {copied ? 'Copied' : 'Copy'}
+        </button>
+      </div>
+    </div>
   );
 }
 
