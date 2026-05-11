@@ -115,6 +115,31 @@ export const COLLECTION_WEEK_END = '2026-11-23';
 export const COLLECTION_DAY = 4;
 export const COLLECTION_TOTAL_DAYS = 8;
 
+export interface CollectionDay {
+  index: number;
+  date: string;
+  weekday: 'Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri' | 'Sat' | 'Sun';
+  monthDay: number;
+}
+
+// Collection Week 2026: Mon Nov 16 → Mon Nov 23. 8 day-pills for the Daily
+// Totals selector. Today is Day 4 (Thu Nov 19) for the demo.
+export const COLLECTION_DAYS: CollectionDay[] = [
+  { index: 1, date: '2026-11-16', weekday: 'Mon', monthDay: 16 },
+  { index: 2, date: '2026-11-17', weekday: 'Tue', monthDay: 17 },
+  { index: 3, date: '2026-11-18', weekday: 'Wed', monthDay: 18 },
+  { index: 4, date: '2026-11-19', weekday: 'Thu', monthDay: 19 },
+  { index: 5, date: '2026-11-20', weekday: 'Fri', monthDay: 20 },
+  { index: 6, date: '2026-11-21', weekday: 'Sat', monthDay: 21 },
+  { index: 7, date: '2026-11-22', weekday: 'Sun', monthDay: 22 },
+  { index: 8, date: '2026-11-23', weekday: 'Mon', monthDay: 23 },
+];
+
+// Synthetic per-day box totals for the demo CDO's weekly chart. Real OCC
+// pattern: light early in the week, peak on Sat-Sun, taper before the
+// transport-to-Central deadline on the final Monday.
+export const WEEKLY_TOTALS_DEMO = [42, 78, 130, 156, 0, 0, 0, 0];
+
 export const ROLE_CONFIG: Record<
   UserRole,
   { label: string; color: string; bgColor: string; description: string }
