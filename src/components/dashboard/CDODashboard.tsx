@@ -1,6 +1,5 @@
-import { Gift, Package, FileText, Truck, PlusCircle, TrendingUp, Clock, Bell, ChevronRight } from 'lucide-react';
+import { Gift, Package, FileText, Truck, PlusCircle, TrendingUp, Clock } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { Link } from 'react-router';
 import {
   SHOEBOX_ENTRIES, CARTONS, LOCATIONS, getDropoffsForCDO, getShoeboxesForCDO,
   getShoeboxesForLocation, getCartonsForLocation, getRecentCheckins, formatCount,
@@ -11,12 +10,6 @@ const item = { hidden: { opacity: 0, x: 20 }, show: { opacity: 1, x: 0, transiti
 
 export default function CDODashboard() {
   const cdoId = 'cdo1';
-
-  // Pending signups (pre-Collection-Week) live in localStorage. We surface
-  // them on the CDO Leader's primary screen so they don't have to remember
-  // to check /signups separately.
-  const signupsRaw = typeof window !== 'undefined' ? window.localStorage.getItem('occ:signups') : null;
-  const pendingSignups = signupsRaw ? (JSON.parse(signupsRaw) as unknown[]).length : 0;
   const myTotal = getShoeboxesForCDO(cdoId);
   const checkedInHere = getShoeboxesForLocation(cdoId);
   const dropoffs = getDropoffsForCDO(cdoId);
@@ -49,27 +42,6 @@ export default function CDODashboard() {
           <p className="text-xs text-occ-green-dark/70">Collection Week in Progress!</p>
         </div>
       </div>
-
-      {/* Pending signups — only shows when there are pre-week signups to review */}
-      {pendingSignups > 0 && (
-        <Link
-          to="/signups"
-          className="group flex items-center gap-3 bg-lime hover:bg-lime-dark transition-colors text-occ-green-dark hover:text-white rounded-2xl px-5 py-3 shadow-card"
-        >
-          <div className="w-10 h-10 rounded-2xl bg-white/40 flex items-center justify-center shrink-0">
-            <Bell className="w-5 h-5" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="font-display text-base leading-tight">
-              {pendingSignups} new {pendingSignups === 1 ? 'signup' : 'signups'} this week
-            </p>
-            <p className="text-[11px] text-occ-green-dark/80 group-hover:text-white/80 mt-0.5">
-              Pre-Collection-Week volunteers ready to be assigned.
-            </p>
-          </div>
-          <ChevronRight className="w-5 h-5 shrink-0 group-hover:translate-x-1 transition-transform" />
-        </Link>
-      )}
 
       {/* KPI Cards */}
       <motion.div variants={container} initial="hidden" animate="show" className="flex gap-3 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-1">

@@ -13,7 +13,7 @@ interface NavbarProps {
 const DEMO_ROLES: UserRole[] = ['super_admin', 'admin', 'regional', 'cdo_leader', 'do_leader', 'greeter'];
 
 export default function Navbar({ title }: NavbarProps) {
-  const { user, logout, switchRole } = useAuth();
+  const { user, logout, switchRole, isRegionalAdmin } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
 
@@ -31,6 +31,9 @@ export default function Navbar({ title }: NavbarProps) {
     { label: 'BOL & Loading', path: '/loading', icon: 'loading' },
     { label: 'Live Tracker', path: '/live', icon: 'live' },
     { label: 'Volunteers', path: '/volunteers', icon: 'volunteers' },
+    // Signups & Schedule contains individual volunteer PII — only visible
+    // to Regional Admin, SP Admin, and Super Admin.
+    ...(isRegionalAdmin ? [{ label: 'Signups & Schedule', path: '/signups', icon: 'signups' }] : []),
     { label: 'Settings', path: '/settings', icon: 'settings' },
   ];
 

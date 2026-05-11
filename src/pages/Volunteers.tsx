@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import Layout from '@/components/Layout';
+import { useAuth } from '@/hooks/useAuth';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import {
   VOLUNTEERS,
@@ -15,6 +16,7 @@ import {
 import type { Volunteer, VolunteerRole } from '@/data/mockData';
 
 export default function Volunteers() {
+  const { isRegionalAdmin } = useAuth();
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<'all' | VolunteerRole>('all');
   const [checkedIn, setCheckedIn] = useLocalStorage<string[]>('occ:volunteer-checkins', ['v1', 'v3', 'v5', 'v7', 'v11']);
@@ -79,8 +81,8 @@ export default function Volunteers() {
           <StatTile icon={Award} label="Roles" value={`${rolesCovered}/6`} color="text-purple-accent" bg="bg-purple-light" />
         </div>
 
-        {/* New signups alert — only shows when there are pending signups */}
-        {pendingSignups > 0 && (
+        {/* New signups alert — Regional/SP/Super Admin only (privacy gate) */}
+        {isRegionalAdmin && pendingSignups > 0 && (
           <Link
             to="/signups"
             className="flex items-center gap-3 bg-lime hover:bg-lime-dark transition-colors text-occ-green-dark hover:text-white rounded-2xl px-5 py-3 shadow-card group"
@@ -120,22 +122,24 @@ export default function Volunteers() {
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
             </div>
           </Link>
-          <Link
-            to="/signups"
-            className="flex items-center gap-4 bg-bg-card rounded-2xl border border-border-custom shadow-card p-4 hover:border-occ-green hover:shadow-card-elevated transition-all group"
-          >
-            <div className="w-14 h-14 rounded-2xl bg-occ-green-light flex items-center justify-center shrink-0">
-              <Calendar className="w-7 h-7 text-occ-green" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-occ-green mb-0.5">Signups & Schedule</p>
-              <p className="font-display text-base text-ink leading-tight">Who's volunteering, what days are covered</p>
-              <p className="text-[11px] text-ink-light mt-0.5 italic">Block out days when a group has them. View pre-week signups.</p>
-            </div>
-            <div className="text-ink-light/40 group-hover:text-occ-green group-hover:translate-x-1 transition-all shrink-0">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
-            </div>
-          </Link>
+          {isRegionalAdmin && (
+            <Link
+              to="/signups"
+              className="flex items-center gap-4 bg-bg-card rounded-2xl border border-border-custom shadow-card p-4 hover:border-occ-green hover:shadow-card-elevated transition-all group"
+            >
+              <div className="w-14 h-14 rounded-2xl bg-occ-green-light flex items-center justify-center shrink-0">
+                <Calendar className="w-7 h-7 text-occ-green" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-occ-green mb-0.5">Signups & Schedule</p>
+                <p className="font-display text-base text-ink leading-tight">Who's volunteering, what days are covered</p>
+                <p className="text-[11px] text-ink-light mt-0.5 italic">Block out days when a group has them. View pre-week signups.</p>
+              </div>
+              <div className="text-ink-light/40 group-hover:text-occ-green group-hover:translate-x-1 transition-all shrink-0">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+              </div>
+            </Link>
+          )}
         </div>
 
         {/* Role distribution */}
