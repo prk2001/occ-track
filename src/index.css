@@ -187,4 +187,19 @@
     transition: background-color 0.15s ease;
   }
   .btn-lime:hover { background-color: #65A30D; color: #FFFFFF; }
+
+  /* Print-roster mode — applied when admin prints from /signups so the
+     page renders as a clean physical roster for the welcome table. */
+  @media print {
+    .print-hide { display: none !important; }
+    .print-only { display: block !important; }
+    body { background: white !important; }
+    .bg-dotted-grid { background-image: none !important; background-color: white !important; }
+    .shadow-card, .shadow-card-elevated { box-shadow: none !important; }
+    .rounded-2xl, .rounded-xl, .rounded-3xl { border-radius: 0 !important; }
+    nav, header[class*="sticky"] { display: none !important; }
+    main { padding: 0 !important; }
+    @page { margin: 0.5in; }
+  }
+  .print-only { display: none; }
 }

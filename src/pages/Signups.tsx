@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   ClipboardList, Calendar, Users, Lock, Unlock, CalendarOff, Plus, X, Phone, Mail,
   CheckCircle2, AlertCircle, Shield, Sparkles, ChevronRight, MessageCircle, Trash2,
-  Pencil, Search, Mail as MailIcon, RotateCcw,
+  Pencil, Search, Mail as MailIcon, RotateCcw, Printer,
 } from 'lucide-react';
 import Layout from '@/components/Layout';
 import { useAuth } from '@/hooks/useAuth';
@@ -112,6 +112,16 @@ export default function Signups() {
   return (
     <Layout>
       <div className="px-4 py-4 max-w-5xl mx-auto space-y-6 pb-24">
+        {/* Print-only header — clean physical roster heading */}
+        <div className="print-only border-b border-ink pb-4 mb-4 hidden">
+          <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-ink-light">
+            Operation Christmas Child · Samaritan's Purse
+          </p>
+          <h1 className="text-2xl font-bold text-ink mt-1">{cdoLabel} — Volunteer Roster</h1>
+          <p className="text-sm text-ink-light mt-1">
+            Collection Week 2026 · November 16–23 · {signups.length} signups
+          </p>
+        </div>
         {/* Hero */}
         <header className="flex items-start justify-between gap-3">
           <div className="space-y-2 pt-1">
@@ -128,7 +138,7 @@ export default function Signups() {
               {cdoLabel} · {upcomingOpenDays} of {upcomingDays} upcoming days still open for signups
             </p>
           </div>
-          <span className="text-[10px] font-bold text-sp-red bg-sp-red-light px-2 py-1 rounded-full uppercase tracking-wider whitespace-nowrap shrink-0 mt-1">
+          <span className="text-[10px] font-bold text-sp-red bg-sp-red-light px-2 py-1 rounded-full uppercase tracking-wider whitespace-nowrap shrink-0 mt-1 print-hide">
             CDO Only
           </span>
         </header>
@@ -138,7 +148,7 @@ export default function Signups() {
         {isCDOLeader && (
           <>
             {/* Stats */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 print-hide">
               <StatTile icon={ClipboardList} label="Pending Signups" value={String(signups.length)} bg="bg-sp-red-light" color="text-sp-red" />
               <StatTile icon={Unlock} label="Open Days" value={String(openDays)} bg="bg-occ-green-light" color="text-occ-green" />
               <StatTile icon={Lock} label="Covered Days" value={String(blocks.length)} bg="bg-gold-light" color="text-gold" />
@@ -146,7 +156,7 @@ export default function Signups() {
             </div>
 
             {/* Day schedule section */}
-            <section>
+            <section className="print-hide">
               <header className="mb-3">
                 <h2 className="font-display text-xl text-ink leading-tight">Collection Week Schedule</h2>
                 <p className="text-xs text-ink-light italic mt-1">
@@ -202,7 +212,14 @@ export default function Signups() {
                   </p>
                 </div>
                 {signups.length > 0 && (
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 print-hide">
+                    <button
+                      onClick={() => window.print()}
+                      className="h-9 px-3 bg-bg-primary border border-border-custom hover:border-occ-green hover:text-occ-green text-ink-light text-xs font-bold rounded-xl flex items-center gap-1.5 uppercase tracking-wider transition-all"
+                    >
+                      <Printer className="w-3 h-3" />
+                      Print
+                    </button>
                     <button
                       onClick={emailAllSignups}
                       className="h-9 px-3 bg-lime hover:bg-lime-dark transition-colors text-occ-green-dark hover:text-white text-xs font-bold rounded-xl flex items-center gap-1.5 uppercase tracking-wider"
@@ -475,7 +492,7 @@ function SignupCard({ signup, onRemove }: { signup: StoredSignup; onRemove: () =
         </div>
         <button
           onClick={onRemove}
-          className="touch-target text-ink-light/60 hover:text-sp-red transition-colors shrink-0"
+          className="touch-target text-ink-light/60 hover:text-sp-red transition-colors shrink-0 print-hide"
           aria-label={`Remove ${signup.name}`}
         >
           <Trash2 className="w-4 h-4" />

@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { motion } from 'framer-motion';
 import {
-  Users, UserPlus, Search, CheckCircle2, Circle, Phone, Mail, Award, Calendar, QrCode,
+  Users, UserPlus, Search, CheckCircle2, Circle, Phone, Mail, Award, Calendar, QrCode, Bell,
 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import Layout from '@/components/Layout';
@@ -18,6 +18,11 @@ export default function Volunteers() {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<'all' | VolunteerRole>('all');
   const [checkedIn, setCheckedIn] = useLocalStorage<string[]>('occ:volunteer-checkins', ['v1', 'v3', 'v5', 'v7', 'v11']);
+
+  // Read pre-week signups count from the public form's localStorage so the
+  // CDO Leader sees pending signups without having to navigate away.
+  const signupsRaw = typeof window !== 'undefined' ? window.localStorage.getItem('occ:signups') : null;
+  const pendingSignups = signupsRaw ? (JSON.parse(signupsRaw) as unknown[]).length : 0;
 
   // Show the demo CDO's team primarily. Real implementation would scope by
   // the signed-in user's CDO; for the prototype default to cdo1's roster.
@@ -73,6 +78,29 @@ export default function Volunteers() {
           <StatTile icon={Calendar} label="Shifts" value={String(totalShifts)} color="text-gold" bg="bg-gold-light" />
           <StatTile icon={Award} label="Roles" value={`${rolesCovered}/6`} color="text-purple-accent" bg="bg-purple-light" />
         </div>
+
+        {/* New signups alert — only shows when there are pending signups */}
+        {pendingSignups > 0 && (
+          <Link
+            to="/signups"
+            className="flex items-center gap-3 bg-lime hover:bg-lime-dark transition-colors text-occ-green-dark hover:text-white rounded-2xl px-5 py-3 shadow-card group"
+          >
+            <div className="w-10 h-10 rounded-2xl bg-white/40 flex items-center justify-center shrink-0">
+              <Bell className="w-5 h-5" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-display text-base leading-tight">
+                {pendingSignups} new {pendingSignups === 1 ? 'signup' : 'signups'} this week
+              </p>
+              <p className="text-[11px] text-occ-green-dark/80 group-hover:text-white/80 mt-0.5">
+                Pre-Collection-Week volunteers ready to be assigned.
+              </p>
+            </div>
+            <span className="text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">
+              Manage →
+            </span>
+          </Link>
+        )}
 
         {/* Admin shortcuts: Quick Check-In QR (kiosk) + Signups & Schedule (planning) */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
