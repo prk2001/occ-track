@@ -16,6 +16,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/loading': 'BOL & Loading',
   '/live': 'Live Tracker',
   '/volunteers': 'Volunteers',
+  '/states': 'States',
   '/settings': 'Settings',
 };
 
