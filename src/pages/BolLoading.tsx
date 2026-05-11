@@ -55,7 +55,7 @@ function pickCdo(userLocationId: string | undefined): string {
 }
 
 export default function BolLoading() {
-  const { user } = useAuth();
+  const { user, isCDOLeader } = useAuth();
   const cdoId = pickCdo(user?.locationId);
   const cdo = getLocationById(cdoId)!;
 
@@ -128,19 +128,28 @@ export default function BolLoading() {
     <Layout>
       <div className="px-4 py-4 max-w-4xl mx-auto space-y-6 pb-24">
         {/* Editorial hero */}
-        <header className="space-y-2 pt-1">
-          <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-sp-red">
-            Bill of Lading · Truck Loading
-          </p>
-          <h1 className="font-display text-3xl sm:text-4xl font-medium text-ink leading-tight tracking-tight">
-            Seal it. Ship it.
-            <span className="font-display-italic text-sp-red"> Send it home.</span>
-          </h1>
-          <p className="text-sm text-ink-light italic">
-            {cdo.name} · {cdo.city}, {cdo.state}
-          </p>
+        <header className="flex items-start justify-between gap-3">
+          <div className="space-y-2 pt-1">
+            <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-sp-red">
+              Bill of Lading · Truck Loading
+            </p>
+            <h1 className="font-display text-3xl sm:text-4xl font-medium text-ink leading-tight tracking-tight">
+              Seal it. Ship it.
+              <span className="font-display-italic text-sp-red"> Send it home.</span>
+            </h1>
+            <p className="text-sm text-ink-light italic">
+              {cdo.name} · {cdo.city}, {cdo.state}
+            </p>
+          </div>
+          <span className="text-[10px] font-bold text-sp-red bg-sp-red-light px-2 py-1 rounded-full uppercase tracking-wider whitespace-nowrap shrink-0 mt-1">
+            CDO Only
+          </span>
         </header>
 
+        {/* Role gate */}
+        {!isCDOLeader && <BolNotForYourRole role={user?.role ?? null} />}
+
+        {isCDOLeader && <>
         {/* Tabs */}
         <div className="flex p-1 bg-bg-card border border-border-custom rounded-2xl">
           <TabBtn active={tab === 'create'} onClick={() => setTab('create')} icon={<Truck className="w-4 h-4" />} label="Create BOL" />
@@ -201,8 +210,41 @@ export default function BolLoading() {
         ) : (
           <BolHistory bols={allBols} />
         )}
+        </>}
       </div>
     </Layout>
+  );
+}
+
+function BolNotForYourRole({ role }: { role: string | null }) {
+  return (
+    <div className="bg-bg-card rounded-2xl shadow-card border border-border-custom overflow-hidden">
+      <div className="bg-gradient-to-br from-sp-red-light to-bg-primary px-5 py-4 flex items-center gap-3 border-b border-border-custom">
+        <Truck className="w-6 h-6 text-sp-red" />
+        <div>
+          <h2 className="font-display text-base font-medium text-ink">Bills of Lading are created at the Central</h2>
+          <p className="text-[11px] text-ink-light mt-0.5 italic">This step isn&apos;t part of your role.</p>
+        </div>
+      </div>
+      <div className="p-5 space-y-3 text-sm text-ink-light leading-relaxed">
+        <p>
+          A <strong className="text-ink">Bill of Lading</strong> is the shipping paperwork that
+          accompanies a trailer of sealed cartons heading to the Operation Christmas Child Processing
+          Center. The <strong className="text-ink">Central Drop-off Leader</strong> creates the BOL
+          after cartons are packed and the trailer is ready to seal.
+        </p>
+        <p>
+          As a {role === 'do_leader' ? 'Drop-off Leader' : role === 'greeter' ? 'Greeter' : 'volunteer'},
+          your boxes will roll up onto the Central&apos;s BOL after you transport them on the last day
+          of Collection Week.
+        </p>
+        <div className="pt-2">
+          <a href={role === 'greeter' ? '#/checkin' : '#/totals'} className="inline-flex h-11 px-5 bg-sp-red text-white text-sm font-semibold rounded-xl items-center justify-center hover:bg-sp-red-dark transition-colors">
+            {role === 'greeter' ? 'Back to Check-In' : 'Back to My Totals'}
+          </a>
+        </div>
+      </div>
+    </div>
   );
 }
 

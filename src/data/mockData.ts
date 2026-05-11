@@ -140,6 +140,121 @@ export const COLLECTION_DAYS: CollectionDay[] = [
 // transport-to-Central deadline on the final Monday.
 export const WEEKLY_TOTALS_DEMO = [42, 78, 130, 156, 0, 0, 0, 0];
 
+// ──────────────────────────────────────────────────────────────────────────────
+// ZIP code → city/state lookup
+// ──────────────────────────────────────────────────────────────────────────────
+// Used during organization check-in to speed up data entry: greeter types a
+// ZIP, we resolve city/state and (when known) suggest churches that have
+// participated in OCC drives in that ZIP. Covers Bible Belt + top-collecting
+// states. Real implementation would use USPS or a commercial API; for the
+// prototype this static map is fast and offline-friendly.
+export interface ZipInfo {
+  city: string;
+  state: string;
+  churches?: string[];
+}
+
+export const ZIP_LOOKUP: Record<string, ZipInfo> = {
+  // Georgia
+  '30301': { city: 'Atlanta', state: 'GA', churches: ['First Baptist Church', 'Peachtree Road UMC', 'Buckhead Church'] },
+  '30060': { city: 'Marietta', state: 'GA', churches: ['St. Mark’s Church', 'Johnson Ferry Baptist'] },
+  '30030': { city: 'Decatur', state: 'GA', churches: ['Community Bible Church', 'First Baptist Decatur'] },
+  '30328': { city: 'Sandy Springs', state: 'GA', churches: ['Cornerstone Church', 'Sandy Springs UMC'] },
+  '30075': { city: 'Roswell', state: 'GA', churches: ['Living Word Church', 'Roswell Bible Church'] },
+  '30071': { city: 'Norcross', state: 'GA', churches: ['Faith Fellowship', 'Pinnacle Church'] },
+  // North Carolina
+  '28201': { city: 'Charlotte', state: 'NC', churches: ['Grace Community Church', 'Calvary Church', 'Forest Hill Church'] },
+  '28607': { city: 'Boone', state: 'NC', churches: ['Boone Baptist', 'Samaritan’s Purse HQ Chapel'] },
+  '27101': { city: 'Winston-Salem', state: 'NC', churches: ['First Baptist Winston', 'Calvary Baptist'] },
+  // Tennessee
+  '37201': { city: 'Nashville', state: 'TN', churches: ['Calvary Chapel', 'Brentwood Baptist', 'Nashville First Baptist'] },
+  '37402': { city: 'Chattanooga', state: 'TN', churches: ['Chattanooga First Baptist', 'Lookout Mountain Pres'] },
+  // Alabama
+  '35203': { city: 'Birmingham', state: 'AL', churches: ['Briarwood Pres', 'First Baptist Birmingham'] },
+  // Texas
+  '75201': { city: 'Dallas', state: 'TX', churches: ['Hope Church', 'Watermark Community', 'Park Cities Baptist'] },
+  '77002': { city: 'Houston', state: 'TX', churches: ['Houston’s First Baptist', 'Second Baptist Church'] },
+  // South Carolina
+  '29401': { city: 'Charleston', state: 'SC', churches: ['Citadel Square Baptist', 'First Baptist Charleston'] },
+  '29601': { city: 'Greenville', state: 'SC', churches: ['First Baptist Greenville', 'Westside Baptist'] },
+  // Virginia
+  '24502': { city: 'Lynchburg', state: 'VA', churches: ['Liberty Baptist', 'Thomas Road Baptist'] },
+  '23230': { city: 'Richmond', state: 'VA', churches: ['Tabernacle Baptist', 'Hope Church Richmond'] },
+  // Ohio
+  '43215': { city: 'Columbus', state: 'OH', churches: ['Cornerstone Bible', 'Vineyard Columbus'] },
+  '45202': { city: 'Cincinnati', state: 'OH', churches: ['Crossroads Cincinnati', 'College Hill Pres'] },
+  // Florida
+  '33602': { city: 'Tampa', state: 'FL', churches: ['New Hope Church', 'Idlewild Baptist'] },
+  '32801': { city: 'Orlando', state: 'FL', churches: ['First Baptist Orlando', 'Northland Church'] },
+  // Illinois (Midwest)
+  '60601': { city: 'Chicago', state: 'IL', churches: ['Trinity Church', 'Moody Church', 'Park Community'] },
+  '60187': { city: 'Wheaton', state: 'IL', churches: ['College Church', 'Wheaton Bible'] },
+  // Arizona (Southwest)
+  '85001': { city: 'Phoenix', state: 'AZ', churches: ['Faithful Servant', 'Phoenix First'] },
+  // Oregon (Northwest)
+  '97201': { city: 'Portland', state: 'OR', churches: ['Cross Roads Fellowship', 'Imago Dei'] },
+  // Indiana
+  '46202': { city: 'Indianapolis', state: 'IN', churches: ['Traders Point Christian', 'College Park Church'] },
+  // Kentucky
+  '40202': { city: 'Louisville', state: 'KY', churches: ['Sojourn Community', 'Southeast Christian'] },
+  // Missouri
+  '64108': { city: 'Kansas City', state: 'MO', churches: ['IHOP KC', 'First Family Church'] },
+};
+
+export function lookupZip(zip: string): ZipInfo | undefined {
+  return ZIP_LOOKUP[zip.trim()];
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Volunteer roster
+// ──────────────────────────────────────────────────────────────────────────────
+export type VolunteerRole = 'unloader' | 'counter' | 'greeter' | 'cartonizer' | 'loader' | 'lead';
+
+export interface Volunteer {
+  id: string;
+  name: string;
+  role: VolunteerRole;
+  email: string;
+  phone: string;
+  shiftDays: string[];
+  locationId: string;
+  emergencyContact?: string;
+}
+
+export const VOLUNTEER_ROLE_CONFIG: Record<VolunteerRole, { label: string; color: string; description: string }> = {
+  lead: { label: 'Team Lead', color: '#C8102E', description: 'Site coordinator' },
+  unloader: { label: 'Unloader', color: '#D97706', description: 'Curbside + transport' },
+  counter: { label: 'Counter', color: '#1A6B3C', description: 'Stacks of 5, totals' },
+  greeter: { label: 'Greeter', color: '#0EA5E9', description: 'Donor welcome' },
+  cartonizer: { label: 'Cartonizer', color: '#7C3AED', description: 'Pack + seal cartons' },
+  loader: { label: 'Loader', color: '#475569', description: 'Trailer + truck' },
+};
+
+// Most volunteers are tied to cdo1 (the demo Central) so the Clock page has a
+// rich roster when scanning into that location's QR code.
+export const VOLUNTEERS: Volunteer[] = [
+  { id: 'v1', name: 'Maria Rodriguez', role: 'lead', email: 'maria@fbc.org', phone: '(404) 555-0101', shiftDays: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'], locationId: 'cdo1', emergencyContact: 'Carlos Rodriguez · spouse' },
+  { id: 'v2', name: 'James Henderson', role: 'cartonizer', email: 'jhenderson@gmail.com', phone: '(404) 555-0212', shiftDays: ['Wed', 'Thu', 'Fri', 'Sat'], locationId: 'cdo1' },
+  { id: 'v3', name: 'Sarah Chen', role: 'counter', email: 'schen@gmail.com', phone: '(770) 555-0233', shiftDays: ['Mon', 'Tue', 'Wed', 'Thu'], locationId: 'cdo1' },
+  { id: 'v4', name: 'David Park', role: 'unloader', email: 'dpark@yahoo.com', phone: '(404) 555-0289', shiftDays: ['Sat', 'Sun', 'Mon'], locationId: 'cdo1' },
+  { id: 'v5', name: 'Rachel Kim', role: 'greeter', email: 'rkim@gmail.com', phone: '(678) 555-0301', shiftDays: ['Mon', 'Wed', 'Fri'], locationId: 'cdo1' },
+  { id: 'v6', name: 'Thomas Wright', role: 'cartonizer', email: 'twright@gmail.com', phone: '(404) 555-0344', shiftDays: ['Thu', 'Fri', 'Sat', 'Sun'], locationId: 'cdo1' },
+  { id: 'v7', name: 'Anna Martinez', role: 'counter', email: 'amartinez@gmail.com', phone: '(770) 555-0367', shiftDays: ['Tue', 'Wed', 'Thu', 'Fri'], locationId: 'cdo1' },
+  { id: 'v8', name: 'Brian Foster', role: 'loader', email: 'bfoster@gmail.com', phone: '(404) 555-0398', shiftDays: ['Sat', 'Sun', 'Mon'], locationId: 'cdo1' },
+  { id: 'v9', name: 'Linda Williams', role: 'greeter', email: 'lwilliams@yahoo.com', phone: '(678) 555-0422', shiftDays: ['Mon', 'Tue', 'Fri'], locationId: 'cdo1' },
+  { id: 'v10', name: 'Marcus Allen', role: 'unloader', email: 'mallen@gmail.com', phone: '(404) 555-0455', shiftDays: ['Sat', 'Sun'], locationId: 'cdo1' },
+  { id: 'v11', name: 'Emily Foster', role: 'counter', email: 'emily@volunteer.org', phone: '(770) 555-0467', shiftDays: ['Wed', 'Thu', 'Fri', 'Sat'], locationId: 'cdo1' },
+  { id: 'v12', name: 'Patricia Lee', role: 'cartonizer', email: 'plee@gmail.com', phone: '(404) 555-0488', shiftDays: ['Fri', 'Sat', 'Sun'], locationId: 'cdo1' },
+  // Volunteers at other locations (used when Clock scans into other QRs).
+  { id: 'v13', name: 'Robert Wilson', role: 'lead', email: 'rwilson@grace.org', phone: '(704) 555-0102', shiftDays: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], locationId: 'cdo2' },
+  { id: 'v14', name: 'Susan Wright', role: 'counter', email: 'swright@grace.org', phone: '(704) 555-0203', shiftDays: ['Wed', 'Thu', 'Fri', 'Sat'], locationId: 'cdo2' },
+  { id: 'v15', name: 'Michael Brown', role: 'cartonizer', email: 'mbrown@grace.org', phone: '(704) 555-0244', shiftDays: ['Thu', 'Fri', 'Sat'], locationId: 'cdo2' },
+];
+
+export function getVolunteersForLocation(locationId: string): Volunteer[] {
+  return VOLUNTEERS.filter((v) => v.locationId === locationId);
+}
+
 export const ROLE_CONFIG: Record<
   UserRole,
   { label: string; color: string; bgColor: string; description: string }

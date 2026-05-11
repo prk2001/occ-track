@@ -1,82 +1,54 @@
 import { useMemo, useState } from 'react';
+import { Link } from 'react-router';
 import { motion } from 'framer-motion';
 import {
-  Users, UserPlus, Search, CheckCircle2, Circle, Phone, Mail, Award, Calendar,
+  Users, UserPlus, Search, CheckCircle2, Circle, Phone, Mail, Award, Calendar, QrCode,
 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import Layout from '@/components/Layout';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
-
-// Realistic OCC Collection Week volunteer roles. Most real CDOs run with 12-30
-// volunteers across these roles for the week. The Counter and Cartonizer roles
-// have the deepest depth requirements; Greeters rotate fastest.
-type VolunteerRole = 'unloader' | 'counter' | 'greeter' | 'cartonizer' | 'loader' | 'lead';
-
-interface Volunteer {
-  id: string;
-  name: string;
-  role: VolunteerRole;
-  email: string;
-  phone: string;
-  shiftDays: string[]; // weekday labels
-  emergencyContact?: string;
-}
-
-const ROLE_CONFIG: Record<VolunteerRole, { label: string; color: string; bg: string; description: string }> = {
-  lead: { label: 'Team Lead', color: '#C8102E', bg: 'bg-sp-red-light', description: 'Site coordinator' },
-  unloader: { label: 'Unloader', color: '#D97706', bg: 'bg-gold-light', description: 'Curbside + transport' },
-  counter: { label: 'Counter', color: '#1A6B3C', bg: 'bg-occ-green-light', description: 'Stacks of 5, totals' },
-  greeter: { label: 'Greeter', color: '#0EA5E9', bg: 'bg-blue-light', description: 'Donor welcome' },
-  cartonizer: { label: 'Cartonizer', color: '#7C3AED', bg: 'bg-purple-light', description: 'Pack + seal cartons' },
-  loader: { label: 'Loader', color: '#475569', bg: 'bg-bg-cream', description: 'Trailer + truck' },
-};
-
-const TEAM: Volunteer[] = [
-  { id: 'v1', name: 'Maria Rodriguez', role: 'lead', email: 'maria@fbc.org', phone: '(404) 555-0101', shiftDays: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'], emergencyContact: 'Carlos Rodriguez · spouse' },
-  { id: 'v2', name: 'James Henderson', role: 'cartonizer', email: 'jhenderson@gmail.com', phone: '(404) 555-0212', shiftDays: ['Wed', 'Thu', 'Fri', 'Sat'] },
-  { id: 'v3', name: 'Sarah Chen', role: 'counter', email: 'schen@gmail.com', phone: '(770) 555-0233', shiftDays: ['Mon', 'Tue', 'Wed', 'Thu'] },
-  { id: 'v4', name: 'David Park', role: 'unloader', email: 'dpark@yahoo.com', phone: '(404) 555-0289', shiftDays: ['Sat', 'Sun', 'Mon'] },
-  { id: 'v5', name: 'Rachel Kim', role: 'greeter', email: 'rkim@gmail.com', phone: '(678) 555-0301', shiftDays: ['Mon', 'Wed', 'Fri'] },
-  { id: 'v6', name: 'Thomas Wright', role: 'cartonizer', email: 'twright@gmail.com', phone: '(404) 555-0344', shiftDays: ['Thu', 'Fri', 'Sat', 'Sun'] },
-  { id: 'v7', name: 'Anna Martinez', role: 'counter', email: 'amartinez@gmail.com', phone: '(770) 555-0367', shiftDays: ['Tue', 'Wed', 'Thu', 'Fri'] },
-  { id: 'v8', name: 'Brian Foster', role: 'loader', email: 'bfoster@gmail.com', phone: '(404) 555-0398', shiftDays: ['Sat', 'Sun', 'Mon'] },
-  { id: 'v9', name: 'Linda Williams', role: 'greeter', email: 'lwilliams@yahoo.com', phone: '(678) 555-0422', shiftDays: ['Mon', 'Tue', 'Fri'] },
-  { id: 'v10', name: 'Marcus Allen', role: 'unloader', email: 'mallen@gmail.com', phone: '(404) 555-0455', shiftDays: ['Sat', 'Sun'] },
-  { id: 'v11', name: 'Emily Foster', role: 'counter', email: 'emily@volunteer.org', phone: '(770) 555-0467', shiftDays: ['Wed', 'Thu', 'Fri', 'Sat'] },
-  { id: 'v12', name: 'Patricia Lee', role: 'cartonizer', email: 'plee@gmail.com', phone: '(404) 555-0488', shiftDays: ['Fri', 'Sat', 'Sun'] },
-];
+import {
+  VOLUNTEERS,
+  VOLUNTEER_ROLE_CONFIG,
+  getLocationById,
+} from '@/data/mockData';
+import type { Volunteer, VolunteerRole } from '@/data/mockData';
 
 export default function Volunteers() {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<'all' | VolunteerRole>('all');
   const [checkedIn, setCheckedIn] = useLocalStorage<string[]>('occ:volunteer-checkins', ['v1', 'v3', 'v5', 'v7', 'v11']);
 
+  // Show the demo CDO's team primarily. Real implementation would scope by
+  // the signed-in user's CDO; for the prototype default to cdo1's roster.
+  const team = useMemo(() => VOLUNTEERS.filter((v) => v.locationId === 'cdo1'), []);
+  const cdoLabel = getLocationById('cdo1')?.name ?? '';
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return TEAM.filter((v) => {
+    return team.filter((v) => {
       if (filter !== 'all' && v.role !== filter) return false;
       if (!q) return true;
       return v.name.toLowerCase().includes(q) || v.role.includes(q) || v.email.toLowerCase().includes(q);
     });
-  }, [query, filter]);
+  }, [query, filter, team]);
 
   const roleStats = useMemo(() => {
-    return (Object.keys(ROLE_CONFIG) as VolunteerRole[]).map((role) => ({
+    return (Object.keys(VOLUNTEER_ROLE_CONFIG) as VolunteerRole[]).map((role) => ({
       role,
-      label: ROLE_CONFIG[role].label,
-      color: ROLE_CONFIG[role].color,
-      count: TEAM.filter((v) => v.role === role).length,
+      label: VOLUNTEER_ROLE_CONFIG[role].label,
+      color: VOLUNTEER_ROLE_CONFIG[role].color,
+      count: team.filter((v) => v.role === role).length,
     })).filter((r) => r.count > 0);
-  }, []);
+  }, [team]);
 
   function toggleCheckin(id: string) {
     setCheckedIn((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
   }
 
-  const totalCheckedIn = checkedIn.length;
-  const totalVolunteers = TEAM.length;
-  const totalShifts = TEAM.reduce((s, v) => s + v.shiftDays.length, 0);
-  const rolesCovered = new Set(TEAM.map((v) => v.role)).size;
+  const totalCheckedIn = team.filter((v) => checkedIn.includes(v.id)).length;
+  const totalShifts = team.reduce((s, v) => s + v.shiftDays.length, 0);
+  const rolesCovered = new Set(team.map((v) => v.role)).size;
 
   return (
     <Layout>
@@ -90,17 +62,36 @@ export default function Volunteers() {
             The hands behind <span className="font-display-italic text-sp-red">every box.</span>
           </h1>
           <p className="text-sm text-ink-light italic">
-            {totalVolunteers} volunteers · {totalShifts} shifts scheduled this week
+            {team.length} volunteers · {totalShifts} shifts · {cdoLabel}
           </p>
         </header>
 
         {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <StatTile icon={Users} label="Team" value={String(totalVolunteers)} color="text-blue-accent" bg="bg-blue-light" />
+          <StatTile icon={Users} label="Team" value={String(team.length)} color="text-blue-accent" bg="bg-blue-light" />
           <StatTile icon={CheckCircle2} label="On Site" value={String(totalCheckedIn)} color="text-occ-green" bg="bg-occ-green-light" />
           <StatTile icon={Calendar} label="Shifts" value={String(totalShifts)} color="text-gold" bg="bg-gold-light" />
           <StatTile icon={Award} label="Roles" value={`${rolesCovered}/6`} color="text-purple-accent" bg="bg-purple-light" />
         </div>
+
+        {/* Quick Check-In Mode CTA — links to the standalone /clock page that
+            volunteers reach by scanning a QR posted at the welcome table */}
+        <Link
+          to="/clock?loc=cdo1"
+          className="flex items-center gap-4 bg-bg-card rounded-2xl border border-border-custom shadow-card p-4 hover:border-sp-red hover:shadow-card-elevated transition-all group"
+        >
+          <div className="w-14 h-14 rounded-2xl bg-sp-red-light flex items-center justify-center shrink-0">
+            <QrCode className="w-7 h-7 text-sp-red" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-sp-red mb-0.5">Quick Check-In Mode</p>
+            <p className="font-display text-base font-medium text-ink leading-tight">Volunteers clock in from their phone</p>
+            <p className="text-[11px] text-ink-light mt-0.5 italic">Print the QR — they scan it, tap their name, done.</p>
+          </div>
+          <div className="text-ink-light/40 group-hover:text-sp-red group-hover:translate-x-1 transition-all">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+          </div>
+        </Link>
 
         {/* Role distribution */}
         <section className="bg-bg-card rounded-2xl shadow-card border border-border-custom p-5">
@@ -157,13 +148,13 @@ export default function Volunteers() {
 
         <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 pb-1">
           <FilterChip active={filter === 'all'} onClick={() => setFilter('all')} label="All" />
-          {(Object.keys(ROLE_CONFIG) as VolunteerRole[]).map((r) => (
+          {(Object.keys(VOLUNTEER_ROLE_CONFIG) as VolunteerRole[]).map((r) => (
             <FilterChip
               key={r}
               active={filter === r}
               onClick={() => setFilter(r)}
-              label={ROLE_CONFIG[r].label}
-              tint={ROLE_CONFIG[r].color}
+              label={VOLUNTEER_ROLE_CONFIG[r].label}
+              tint={VOLUNTEER_ROLE_CONFIG[r].color}
             />
           ))}
         </div>
@@ -222,7 +213,7 @@ function FilterChip({ active, onClick, label, tint }: { active: boolean; onClick
 }
 
 function VolunteerCard({ volunteer, checkedIn, onToggle }: { volunteer: Volunteer; checkedIn: boolean; onToggle: () => void }) {
-  const cfg = ROLE_CONFIG[volunteer.role];
+  const cfg = VOLUNTEER_ROLE_CONFIG[volunteer.role];
   return (
     <motion.li
       variants={{
@@ -247,7 +238,7 @@ function VolunteerCard({ volunteer, checkedIn, onToggle }: { volunteer: Voluntee
           <h3 className="font-display text-base font-medium text-ink truncate leading-tight">{volunteer.name}</h3>
           <span
             className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full mt-1"
-            style={{ backgroundColor: cfg.bg.replace('bg-', '').includes('cream') ? '#F4EDE0' : undefined, color: cfg.color }}
+            style={{ color: cfg.color }}
           >
             <span className="w-1 h-1 rounded-full" style={{ backgroundColor: cfg.color }} />
             {cfg.label}
