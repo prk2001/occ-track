@@ -3,7 +3,7 @@ import { Link } from 'react-router';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   HandHeart, ChevronLeft, ChevronRight, X, User, Phone, Mail, MapPin,
-  CheckCircle2, Sparkles, Shield, Shirt, MessageCircle,
+  CheckCircle2, Sparkles, Shield, Shirt, MessageCircle, CalendarDays, Lock,
 } from 'lucide-react';
 import Layout from '@/components/Layout';
 import Logo from '@/components/Logo';
@@ -11,9 +11,13 @@ import ShoeboxStack from '@/components/illustrations/ShoeboxStack';
 import ChristmasStar from '@/components/illustrations/ChristmasStar';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import {
+  COLLECTION_DAYS,
+  COLLECTION_DAY,
+  DEFAULT_DAY_TIMES,
   COLLECTION_WEEK_START,
   COLLECTION_WEEK_END,
 } from '@/data/mockData';
+import type { DayBlock } from '@/data/mockData';
 
 // Note on roles: in real OCC practice, volunteers sign up just to *serve* —
 // the Central Drop-off Leader assigns specific roles (Greeter, Counter,
@@ -178,6 +182,16 @@ function StepBar({ step }: { step: Step }) {
 
 // ─── Intro ───────────────────────────────────────────────────────────────────
 function IntroStep({ onStart }: { onStart: () => void }) {
+  // Read the live admin-managed schedule + day blocks so the volunteer sees
+  // exactly what the CDO has set up. Falls back to defaults if the admin
+  // hasn't customized anything yet.
+  const dayTimesRaw = typeof window !== 'undefined' ? window.localStorage.getItem('occ:day-times') : null;
+  const dayTimes: Record<string, string> = dayTimesRaw ? JSON.parse(dayTimesRaw) : DEFAULT_DAY_TIMES;
+  const blocksRaw = typeof window !== 'undefined' ? window.localStorage.getItem('occ:day-blocks') : null;
+  const blocks: DayBlock[] = blocksRaw ? JSON.parse(blocksRaw) : [];
+  const blocksByDate = new Map(blocks.map((b) => [b.date, b]));
+  const openCount = COLLECTION_DAYS.filter((d) => !blocksByDate.has(d.date)).length;
+
   return (
     <motion.section
       initial={{ opacity: 0, y: 12 }}
@@ -202,15 +216,18 @@ function IntroStep({ onStart }: { onStart: () => void }) {
         </h1>
         <p className="text-sm text-ink-light italic max-w-md mx-auto leading-relaxed">
           {formatWeek(COLLECTION_WEEK_START, COLLECTION_WEEK_END)}. A few minutes here puts your name
-          on a team — we&apos;ll follow up with details a week before.
+          on the team — we&apos;ll follow up with details a week before.
         </p>
       </div>
 
       <div className="grid grid-cols-3 gap-3 max-w-md mx-auto pt-2">
         <Fact value="~3 hrs" label="Avg shift" />
-        <Fact value="6 roles" label="To choose from" />
+        <Fact value={`${openCount}/${COLLECTION_DAYS.length}`} label="Days open" />
         <Fact value="0 cost" label="Just your time" />
       </div>
+
+      {/* Week schedule preview — pulls live data from /signups admin */}
+      <SchedulePreview dayTimes={dayTimes} blocksByDate={blocksByDate} />
 
       <motion.button
         whileTap={{ scale: 0.97 }}
@@ -227,6 +244,63 @@ function IntroStep({ onStart }: { onStart: () => void }) {
         Already volunteering this week? <Link to="/login" className="font-semibold text-sp-red underline">Sign in instead</Link>
       </p>
     </motion.section>
+  );
+}
+
+function SchedulePreview({
+  dayTimes, blocksByDate,
+}: {
+  dayTimes: Record<string, string>;
+  blocksByDate: Map<string, DayBlock>;
+}) {
+  return (
+    <section className="bg-bg-card rounded-2xl border border-border-custom shadow-card overflow-hidden text-left">
+      <header className="px-5 py-3 border-b border-border-custom flex items-center gap-2 bg-bg-cream/40">
+        <CalendarDays className="w-4 h-4 text-occ-green" />
+        <h3 className="font-display text-base text-ink">This Collection Week</h3>
+        <span className="text-[10px] font-bold uppercase tracking-wider text-ink-light ml-auto">
+          You&apos;ll help any open day
+        </span>
+      </header>
+      <ul className="divide-y divide-border-custom/60">
+        {COLLECTION_DAYS.map((d) => {
+          const block = blocksByDate.get(d.date);
+          const isPast = d.index < COLLECTION_DAY;
+          const time = dayTimes[d.date] ?? '';
+          return (
+            <li
+              key={d.date}
+              className={`flex items-center gap-3 px-5 py-2.5 text-sm ${
+                isPast ? 'opacity-50' : ''
+              }`}
+            >
+              <div className="flex flex-col items-center w-9 shrink-0">
+                <span className="text-[9px] font-bold uppercase tracking-wider text-ink-light leading-none">
+                  {d.weekday}
+                </span>
+                <span className="font-display text-lg text-ink tabular-nums leading-none mt-0.5">
+                  {d.monthDay}
+                </span>
+              </div>
+              <span className="text-ink-light tabular-nums flex-1">{time}</span>
+              {block ? (
+                <span className="flex items-center gap-1.5 text-[11px] font-bold text-gold bg-gold-light px-2 py-1 rounded-full uppercase tracking-wider">
+                  <Lock className="w-2.5 h-2.5" />
+                  {block.coveredBy}
+                </span>
+              ) : isPast ? (
+                <span className="text-[11px] font-bold text-ink-light/60 uppercase tracking-wider">Past</span>
+              ) : (
+                <span className="flex items-center gap-1.5 text-[11px] font-bold text-occ-green uppercase tracking-wider">
+                  <span className="w-1.5 h-1.5 rounded-full bg-occ-green" />
+                  Open
+                </span>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }
 

@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   ClipboardList, Calendar, Users, Lock, Unlock, CalendarOff, Plus, X, Phone, Mail,
   CheckCircle2, AlertCircle, Shield, Sparkles, ChevronRight, MessageCircle, Trash2,
+  Pencil, Search, Mail as MailIcon, RotateCcw,
 } from 'lucide-react';
 import Layout from '@/components/Layout';
 import { useAuth } from '@/hooks/useAuth';
@@ -11,13 +12,13 @@ import { useLocalStorage } from '@/hooks/useLocalStorage';
 import {
   COLLECTION_DAYS,
   COLLECTION_DAY,
+  DEFAULT_DAY_TIMES,
   getLocationById,
   timeAgo,
 } from '@/data/mockData';
+import type { DayBlock } from '@/data/mockData';
 
-// Mirrors the StoredSignup shape from VolunteerSignup.tsx. We're not importing
-// directly because that file owns the wizard state; this page is consumer-only
-// for the data in localStorage 'occ:signups'.
+// Mirrors StoredSignup from VolunteerSignup.tsx. Consumer-only here.
 interface StoredSignup {
   id: string;
   name: string;
@@ -33,34 +34,8 @@ interface StoredSignup {
   agree?: boolean;
 }
 
-// Per-day block. CDO Leader marks a Collection Week day as covered by a
-// specific group (e.g. "First Baptist Youth Group") so the day comes off
-// the open-for-signup pool.
-interface DayBlock {
-  date: string;       // ISO date from COLLECTION_DAYS
-  coveredBy: string;  // group name
-  note?: string;
-  blockedAt: string;
-}
-
-// Realistic per-day time windows mirroring the church signup sheet:
-// alternating morning (Mon/Wed/Fri/Sat/Mon) and afternoon (Tue/Thu) slots.
-// Sunday is a single afternoon. Real CDOs vary their hours; these defaults
-// match the paper sheet you shared.
-const DAY_TIMES: Record<string, string> = {
-  '2026-11-16': '9 AM – 12 Noon',
-  '2026-11-17': '4 PM – 6 PM',
-  '2026-11-18': '9 AM – 12 Noon',
-  '2026-11-19': '4 PM – 6 PM',
-  '2026-11-20': '9 AM – 12 Noon',
-  '2026-11-21': '9 AM – 4 PM',
-  '2026-11-22': '1 PM – 4 PM',
-  '2026-11-23': '9 AM – 12 Noon',
-};
-
-// Seed example: Saturday is often covered by a youth group; pre-populate it
-// once so the page demos the "blocked" state right away. Read-only seed —
-// the user can remove via Reopen button.
+// Seed: Saturday is often covered by a youth group. Demos the blocked
+// state on first load; user can clear via Reopen.
 const SEED_BLOCKS: DayBlock[] = [
   {
     date: '2026-11-21',
@@ -75,7 +50,40 @@ export default function Signups() {
   const cdoLabel = getLocationById('cdo1')?.name ?? 'Central Drop-off';
   const [signups, setSignups] = useLocalStorage<StoredSignup[]>('occ:signups', []);
   const [blocks, setBlocks] = useLocalStorage<DayBlock[]>('occ:day-blocks', SEED_BLOCKS);
+  const [dayTimes, setDayTimes] = useLocalStorage<Record<string, string>>('occ:day-times', DEFAULT_DAY_TIMES);
   const [blockingDate, setBlockingDate] = useState<string | null>(null);
+  const [editingTimeDate, setEditingTimeDate] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
+
+  function updateDayTime(date: string, value: string) {
+    setDayTimes((prev) => ({ ...prev, [date]: value }));
+    setEditingTimeDate(null);
+  }
+
+  function resetDayTimes() {
+    setDayTimes(DEFAULT_DAY_TIMES);
+  }
+
+  function clearAllSignups() {
+    if (signups.length === 0) return;
+    if (confirm(`Remove all ${signups.length} signups? This cannot be undone.`)) {
+      setSignups([]);
+    }
+  }
+
+  function emailAllSignups() {
+    const emails = signups.map((s) => s.email).filter(Boolean).join(',');
+    if (!emails) return;
+    window.location.href = `mailto:?bcc=${encodeURIComponent(emails)}&subject=${encodeURIComponent('Collection Week 2026 — Volunteer Update')}`;
+  }
+
+  const filteredSignups = signups.filter((s) => {
+    const q = query.trim().toLowerCase();
+    if (!q) return true;
+    return [s.name, s.email, s.phone, s.notes, s.emergencyName].some((f) =>
+      f?.toLowerCase().includes(q)
+    );
+  });
 
   const blocksByDate = useMemo(() => {
     const m = new Map<string, DayBlock>();
@@ -154,21 +162,37 @@ export default function Signups() {
                     <DayCard
                       key={d.date}
                       day={d}
-                      time={DAY_TIMES[d.date] ?? ''}
+                      time={dayTimes[d.date] ?? ''}
                       block={block}
                       isToday={isToday}
                       isPast={isPast}
+                      isEditingTime={editingTimeDate === d.date}
                       onBlock={() => setBlockingDate(d.date)}
                       onReopen={() => reopenDay(d.date)}
+                      onStartEditTime={() => setEditingTimeDate(d.date)}
+                      onSaveTime={(v) => updateDayTime(d.date, v)}
+                      onCancelEditTime={() => setEditingTimeDate(null)}
                     />
                   );
                 })}
+              </div>
+              <div className="mt-3 flex items-center justify-between text-[11px] text-ink-light">
+                <p className="italic">
+                  Tap any time to edit your hours. Volunteers see this schedule when they sign up.
+                </p>
+                <button
+                  onClick={resetDayTimes}
+                  className="font-semibold hover:text-sp-red transition-colors flex items-center gap-1"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  Reset to defaults
+                </button>
               </div>
             </section>
 
             {/* Signups list */}
             <section>
-              <header className="mb-3 flex items-center justify-between">
+              <header className="mb-3 flex items-center justify-between gap-3 flex-wrap">
                 <div>
                   <h2 className="font-display text-xl text-ink leading-tight">
                     {signups.length} {signups.length === 1 ? 'Signup' : 'Signups'}
@@ -177,6 +201,24 @@ export default function Signups() {
                     Volunteers who said they'd serve this Collection Week.
                   </p>
                 </div>
+                {signups.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={emailAllSignups}
+                      className="h-9 px-3 bg-lime hover:bg-lime-dark transition-colors text-occ-green-dark hover:text-white text-xs font-bold rounded-xl flex items-center gap-1.5 uppercase tracking-wider"
+                    >
+                      <MailIcon className="w-3 h-3" />
+                      Email all
+                    </button>
+                    <button
+                      onClick={clearAllSignups}
+                      className="h-9 px-3 bg-bg-primary border border-border-custom hover:border-sp-red hover:text-sp-red text-ink-light text-xs font-bold rounded-xl flex items-center gap-1.5 uppercase tracking-wider transition-all"
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                      Clear all
+                    </button>
+                  </div>
+                )}
                 {signups.length === 0 && (
                   <Link
                     to="/signup"
@@ -186,6 +228,17 @@ export default function Signups() {
                   </Link>
                 )}
               </header>
+              {signups.length > 0 && (
+                <div className="relative mb-3">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-light/60 pointer-events-none" />
+                  <input
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="Search name, email, phone, or notes…"
+                    className="w-full h-10 pl-10 pr-3 bg-bg-card border border-border-custom rounded-xl text-sm focus:outline-none focus:border-sp-red transition-colors"
+                  />
+                </div>
+              )}
 
               {signups.length === 0 ? (
                 <div className="bg-bg-card rounded-2xl border border-border-custom p-10 text-center">
@@ -210,7 +263,7 @@ export default function Signups() {
                   variants={{ hidden: {}, show: { transition: { staggerChildren: 0.04 } } }}
                   className="grid grid-cols-1 lg:grid-cols-2 gap-3"
                 >
-                  {signups.map((s) => (
+                  {filteredSignups.map((s) => (
                     <SignupCard key={s.id} signup={s} onRemove={() => removeSignup(s.id)} />
                   ))}
                 </motion.ul>
@@ -224,7 +277,7 @@ export default function Signups() {
         {blockingDate && (
           <BlockDaySheet
             date={blockingDate}
-            time={DAY_TIMES[blockingDate] ?? ''}
+            time={dayTimes[blockingDate] ?? ''}
             onCancel={() => setBlockingDate(null)}
             onSave={(coveredBy, note) => addBlock(blockingDate, coveredBy, note)}
           />
@@ -236,17 +289,23 @@ export default function Signups() {
 
 // ─── Day card ───────────────────────────────────────────────────────────────
 function DayCard({
-  day, time, block, isToday, isPast, onBlock, onReopen,
+  day, time, block, isToday, isPast, isEditingTime,
+  onBlock, onReopen, onStartEditTime, onSaveTime, onCancelEditTime,
 }: {
   day: typeof COLLECTION_DAYS[number];
   time: string;
   block?: DayBlock;
   isToday: boolean;
   isPast: boolean;
+  isEditingTime: boolean;
   onBlock: () => void;
   onReopen: () => void;
+  onStartEditTime: () => void;
+  onSaveTime: (value: string) => void;
+  onCancelEditTime: () => void;
 }) {
   const blocked = !!block;
+  const [draftTime, setDraftTime] = useState(time);
   return (
     <motion.div
       variants={{ hidden: { opacity: 0, y: 8 }, show: { opacity: 1, y: 0 } }}
@@ -279,7 +338,40 @@ function DayCard({
         )}
       </div>
 
-      <p className="text-xs text-ink-light tabular-nums mb-3">{time}</p>
+      {isEditingTime ? (
+        <div className="mb-3 flex items-center gap-1.5">
+          <input
+            autoFocus
+            value={draftTime}
+            onChange={(e) => setDraftTime(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') onSaveTime(draftTime);
+              if (e.key === 'Escape') onCancelEditTime();
+            }}
+            placeholder="e.g. 9 AM – 12 Noon"
+            className="flex-1 h-8 px-2 text-xs tabular-nums bg-bg-primary border border-sp-red rounded-lg focus:outline-none text-ink"
+          />
+          <button
+            onClick={() => onSaveTime(draftTime)}
+            className="px-2 h-8 bg-occ-green text-white text-[10px] font-bold rounded-lg uppercase tracking-wider"
+          >Save</button>
+          <button
+            onClick={onCancelEditTime}
+            className="px-2 h-8 text-[10px] font-bold text-ink-light uppercase tracking-wider"
+          >Cancel</button>
+        </div>
+      ) : (
+        <button
+          onClick={onStartEditTime}
+          disabled={isPast}
+          className="text-xs text-ink-light tabular-nums mb-3 hover:text-sp-red transition-colors flex items-center gap-1 group disabled:hover:text-ink-light disabled:cursor-default"
+        >
+          <span>{time}</span>
+          {!isPast && (
+            <Pencil className="w-2.5 h-2.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+          )}
+        </button>
+      )}
 
       {blocked ? (
         <>

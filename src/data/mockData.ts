@@ -140,6 +140,33 @@ export const COLLECTION_DAYS: CollectionDay[] = [
 // transport-to-Central deadline on the final Monday.
 export const WEEKLY_TOTALS_DEMO = [42, 78, 130, 156, 0, 0, 0, 0];
 
+// Default shift time windows for each Collection Week day. Mirrors a real
+// church signup sheet: alternating mornings (Mon/Wed/Fri) and afternoons
+// (Tue/Thu), longer Saturday window, shorter Sunday afternoon, final Monday
+// morning. Each CDO can override these on the Signups page; user edits get
+// stored in localStorage 'occ:day-times'.
+export const DEFAULT_DAY_TIMES: Record<string, string> = {
+  '2026-11-16': '9 AM – 12 Noon',
+  '2026-11-17': '4 PM – 6 PM',
+  '2026-11-18': '9 AM – 12 Noon',
+  '2026-11-19': '4 PM – 6 PM',
+  '2026-11-20': '9 AM – 12 Noon',
+  '2026-11-21': '9 AM – 4 PM',
+  '2026-11-22': '1 PM – 4 PM',
+  '2026-11-23': '9 AM – 12 Noon',
+};
+
+// Per-day block. CDO Leader marks a Collection Week day as covered by a
+// specific group (e.g. "First Baptist Youth Group") so the day is off the
+// open-for-signup pool. Lives in localStorage 'occ:day-blocks' so both the
+// admin /signups page and the public /signup wizard can read it.
+export interface DayBlock {
+  date: string;       // ISO date matching COLLECTION_DAYS[].date
+  coveredBy: string;
+  note?: string;
+  blockedAt: string;  // ISO timestamp when the block was created
+}
+
 // ──────────────────────────────────────────────────────────────────────────────
 // ZIP code → city/state lookup
 // ──────────────────────────────────────────────────────────────────────────────
