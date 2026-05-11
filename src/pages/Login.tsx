@@ -1,14 +1,13 @@
 import { Link, useNavigate } from 'react-router';
 import { motion } from 'framer-motion';
 import {
-  Crown, ShieldCheck, MapPin, Church, Truck, UserCheck, ArrowRight, Sparkles, HandHeart,
+  Crown, ShieldCheck, MapPin, Church, Truck, UserCheck, ArrowRight, HandHeart,
 } from 'lucide-react';
 import Layout from '@/components/Layout';
 import Logo from '@/components/Logo';
 import BibleVerse from '@/components/BibleVerse';
-import ShoeboxStack from '@/components/illustrations/ShoeboxStack';
 import { useAuth } from '@/hooks/useAuth';
-import { ROLE_CONFIG, COLLECTION_WEEK_START, COLLECTION_WEEK_END } from '@/data/mockData';
+import { ROLE_CONFIG } from '@/data/mockData';
 import type { UserRole } from '@/data/mockData';
 
 interface RoleCard {
@@ -28,13 +27,6 @@ const ROLE_CARDS: RoleCard[] = [
 ];
 
 const heroTransition = { duration: 0.6, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] };
-
-function formatWeek(start: string, end: string) {
-  const a = new Date(start);
-  const b = new Date(end);
-  const month = a.toLocaleString('en-US', { month: 'long' });
-  return `${month} ${a.getDate()}–${b.getDate()}, ${b.getFullYear()}`;
-}
 
 export default function Login() {
   const { login } = useAuth();
@@ -66,33 +58,45 @@ export default function Login() {
             <Logo size={42} />
           </motion.div>
 
-          {/* Warm welcome hero with shoebox illustration */}
+          {/* Official NCW campaign banner — replaces the hand-drawn shoebox.
+              Clicks through to /signup since the banner's built-in "Pack a
+              Shoebox" CTA is the natural conversion path for visitors. */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.97, y: 8 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ delay: 0.05, duration: 0.7, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
+            className="max-w-3xl mx-auto"
+          >
+            <Link
+              to="/signup"
+              aria-label="Sign up for Collection Week"
+              className="block rounded-3xl overflow-hidden shadow-card-elevated border border-border-warm hover:shadow-xl transition-shadow"
+            >
+              <img
+                src="/images/ncw-banner-social.png"
+                alt="National Collection Week, November 16–23, 2026 — Pack a Shoebox"
+                className="w-full h-auto block"
+                width={1080}
+                height={566}
+                loading="eager"
+              />
+            </Link>
+          </motion.div>
+
+          {/* Warm welcome — secondary copy under the banner */}
           <motion.section
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ ...heroTransition, delay: 0.1 }}
-            className="text-center max-w-3xl mx-auto space-y-4"
+            transition={{ ...heroTransition, delay: 0.15 }}
+            className="text-center max-w-3xl mx-auto space-y-3 mt-8"
           >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.85, y: -8 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              transition={{ delay: 0.05, duration: 0.7, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
-              className="flex justify-center"
-            >
-              <ShoeboxStack size={120} />
-            </motion.div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-sp-red flex items-center justify-center gap-2">
-              <Sparkles className="w-3 h-3" />
-              Collection Week {new Date(COLLECTION_WEEK_START).getFullYear()}
-              <Sparkles className="w-3 h-3" />
-            </p>
-            <h1 className="font-display text-[clamp(2.25rem,6vw,3.75rem)] font-medium text-ink leading-[1.05] tracking-tight">
+            <h1 className="font-display text-[clamp(1.75rem,5vw,2.75rem)] font-medium text-ink leading-[1.05] tracking-tight">
               Welcome back, friend.
               <span className="font-display-italic block text-sp-red mt-1">A child is waiting on you.</span>
             </h1>
             <p className="text-base text-ink-light italic max-w-xl mx-auto leading-relaxed">
-              {formatWeek(COLLECTION_WEEK_START, COLLECTION_WEEK_END)} · The official Collection Week
-              companion for Samaritan’s Purse Operation Christmas Child.
+              The official tracker for Drop-off Leaders, Central Drop-off Leaders,
+              and Greeters during Collection Week.
             </p>
           </motion.section>
 
