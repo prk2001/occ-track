@@ -3,8 +3,10 @@ import { motion } from 'framer-motion';
 import { AreaChart, Area, ResponsiveContainer } from 'recharts';
 import {
   REGION_DATA, SPARKLINE_DATA, NATIONAL_GOAL, ACTIVITY_FEED,
-  formatCount, timeAgo, CARTONS, BOLS, LOCATIONS,
+  formatCount, timeAgo, CARTONS, BOLS, LOCATIONS, COLLECTION_DAY, COLLECTION_TOTAL_DAYS,
 } from '@/data/mockData';
+import HeritageStrip from '@/components/HeritageStrip';
+import BibleVerse from '@/components/BibleVerse';
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.08 } } };
 const item = { hidden: { opacity: 0, x: 20 }, show: { opacity: 1, x: 0, transition: { duration: 0.3, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] } } };
@@ -25,18 +27,41 @@ export default function AdminDashboard() {
   ];
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
+      {/* Editorial hero */}
+      <motion.section
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+        className="pt-2"
+      >
+        <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-sp-red mb-2">
+          Collection Week 2026 · Day {COLLECTION_DAY} of {COLLECTION_TOTAL_DAYS}
+        </p>
+        <h1 className="font-display text-[clamp(2rem,5vw,3rem)] leading-[1.05] font-medium text-ink tracking-tight">
+          Every box, every state,
+          <br />
+          <span className="italic font-normal text-sp-red">in real time.</span>
+        </h1>
+        <p className="mt-3 text-sm sm:text-base text-ink-light max-w-xl leading-relaxed">
+          A bird&apos;s-eye view of the {LOCATIONS.filter(l => l.type === 'central').length} Central Drop-offs and the volunteers,
+          churches, and families filling them this week.
+        </p>
+      </motion.section>
+
+      <HeritageStrip />
+
       {/* KPI Cards */}
       <motion.div variants={container} initial="hidden" animate="show" className="flex gap-3 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-1">
         {kpis.map((k) => (
           <motion.div
             key={k.label}
             variants={item}
-            className={`${k.bg} rounded-2xl p-4 min-w-[140px] flex-shrink-0 snap-start`}
+            className={`${k.bg} rounded-2xl p-4 min-w-[150px] flex-shrink-0 snap-start border border-white/40`}
           >
             <k.icon className={`w-5 h-5 ${k.color} mb-2`} />
-            <p className="text-2xl font-bold text-navy tabular-nums">{k.value}</p>
-            <p className="text-xs text-slate mt-0.5">{k.sub}</p>
+            <p className="font-display text-3xl font-medium text-ink tabular-nums leading-none">{k.value}</p>
+            <p className="text-xs text-ink-light mt-1.5 font-medium">{k.sub}</p>
           </motion.div>
         ))}
       </motion.div>
@@ -63,8 +88,8 @@ export default function AdminDashboard() {
           />
         </div>
         <div className="flex items-end gap-2 mb-3">
-          <span className="text-2xl font-bold text-navy tabular-nums">{total.toLocaleString()}</span>
-          <span className="text-sm text-slate mb-0.5">of {NATIONAL_GOAL.toLocaleString()} goal</span>
+          <span className="font-display text-4xl sm:text-5xl font-medium text-ink tabular-nums leading-none">{total.toLocaleString()}</span>
+          <span className="text-sm text-ink-light mb-1 tabular-nums">of {NATIONAL_GOAL.toLocaleString()} goal</span>
         </div>
         <div className="h-20 -mx-1">
           <ResponsiveContainer width="100%" height="100%">
@@ -122,6 +147,8 @@ export default function AdminDashboard() {
           ))}
         </motion.div>
       </motion.div>
+
+      <BibleVerse />
 
       {/* Quick Actions */}
       <div className="hidden lg:grid grid-cols-3 gap-3">

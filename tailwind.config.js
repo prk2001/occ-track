@@ -5,7 +5,8 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
+        sans: ['Geist', 'ui-sans-serif', 'system-ui', '-apple-system', 'sans-serif'],
+        display: ['Fraunces', 'ui-serif', 'Georgia', 'serif'],
       },
       colors: {
         'sp-red': {
@@ -30,10 +31,14 @@ module.exports = {
           DEFAULT: '#475569',
           light: '#94A3B8',
         },
-        'bg-primary': '#F8FAFC',
+        'bg-primary': '#FAF7F2',
         'bg-card': '#FFFFFF',
+        'bg-cream': '#F4EDE0',
+        'bg-warm': '#FBF6EC',
         'bg-navy': '#0F172A',
-        'border-custom': '#E2E8F0',
+        'ink': { DEFAULT: '#1A1714', light: '#3D3530' },
+        'border-custom': '#E8DFCF',
+        'border-warm': '#D9CDB5',
         'border-focus': '#C8102E',
         'blue-accent': '#2563EB',
         'blue-light': '#EFF6FF',

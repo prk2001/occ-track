@@ -85,8 +85,8 @@ export default function States() {
             <MapPin className="w-5 h-5 text-sp-red" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-navy leading-tight">50 States</h1>
-            <p className="text-xs text-slate">Live collection status across every US state</p>
+            <h1 className="font-display text-3xl font-medium text-ink leading-none tracking-tight">50 States</h1>
+            <p className="text-xs text-ink-light italic mt-1">Live collection status across every US state</p>
           </div>
         </div>
 
@@ -102,8 +102,8 @@ export default function States() {
             <span className="text-xs text-slate-light tabular-nums">{nationalPct.toFixed(1)}% of goal</span>
           </div>
           <div className="flex items-end gap-2 mb-3">
-            <span className="text-3xl font-bold text-navy tabular-nums">{nationalTotal.toLocaleString()}</span>
-            <span className="text-sm text-slate mb-0.5 tabular-nums">/ {formatCount(NATIONAL_GOAL)}</span>
+            <span className="font-display text-5xl font-medium text-ink tabular-nums leading-none">{nationalTotal.toLocaleString()}</span>
+            <span className="text-sm text-ink-light mb-1 tabular-nums">/ {formatCount(NATIONAL_GOAL)}</span>
           </div>
           <div className="w-full h-3 bg-bg-primary rounded-full overflow-hidden">
             <motion.div

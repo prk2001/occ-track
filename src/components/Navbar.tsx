@@ -49,7 +49,7 @@ export default function Navbar({ title }: NavbarProps) {
             <Mark size={26} />
           </a>
           <span className="h-5 w-px bg-border-custom shrink-0" aria-hidden="true" />
-          <h1 className="text-base font-semibold text-navy leading-tight truncate">{title}</h1>
+          <h1 className="font-display text-lg font-medium text-ink leading-tight truncate tracking-tight">{title}</h1>
         </div>
         <div className="flex items-center gap-2">
           <button

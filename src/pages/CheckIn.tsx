@@ -436,7 +436,7 @@ function CountStep({
             initial={{ scale: 0.85 }}
             animate={{ scale: 1 }}
             transition={{ type: 'spring', stiffness: 380, damping: 22 }}
-            className="text-6xl font-bold text-navy tabular-nums w-32 text-center"
+            className="font-display text-7xl font-medium text-ink tabular-nums w-32 text-center leading-none"
           >
             {count}
           </motion.div>

@@ -241,14 +241,21 @@ export const SHOEBOX_ENTRIES: ShoeboxEntry[] = [
   { id: 'e10', donorName: 'Jackson Family', count: 15, locationId: 'cdo2', greeterId: 'u5', greeterName: 'Emily Foster', timestamp: '2026-11-19T09:20:00Z', date: '2026-11-19' },
 ];
 
+// Cartons are packed at Central Drop-offs only. Real OCC cartons average ~15
+// shoeboxes per carton — 12-18 is the typical range; bigger when boxes are small,
+// smaller when boxes are oversized or the carton holds odd dimensions. Cartons
+// are NOT tied to a donor — once boxes are checked in they become a shared pool.
+export const TYPICAL_BOXES_PER_CARTON = 15;
+export const CARTON_RANGE_TYPICAL = { min: 12, max: 18 };
+
 export const CARTONS: Carton[] = [
-  { id: 'c1', cartonNumber: 1243, locationId: 'cdo1', boxCount: 23, status: 'sealed', createdAt: '2026-11-19T08:30:00Z' },
-  { id: 'c2', cartonNumber: 1244, locationId: 'cdo1', boxCount: 25, status: 'sealed', createdAt: '2026-11-19T09:00:00Z' },
-  { id: 'c3', cartonNumber: 1245, locationId: 'cdo1', boxCount: 22, status: 'open', createdAt: '2026-11-19T09:45:00Z' },
-  { id: 'c4', cartonNumber: 891, locationId: 'cdo2', boxCount: 24, status: 'sealed', createdAt: '2026-11-19T08:15:00Z' },
-  { id: 'c5', cartonNumber: 892, locationId: 'cdo2', boxCount: 26, status: 'open', createdAt: '2026-11-19T09:30:00Z' },
-  { id: 'c6', cartonNumber: 567, locationId: 'cdo3', boxCount: 25, status: 'sealed', createdAt: '2026-11-18T16:00:00Z', loadedAt: '2026-11-18T18:00:00Z', bolId: 'bol1' },
-  { id: 'c7', cartonNumber: 568, locationId: 'cdo3', boxCount: 23, status: 'loaded', createdAt: '2026-11-18T16:30:00Z', loadedAt: '2026-11-18T18:00:00Z', bolId: 'bol1' },
+  { id: 'c1', cartonNumber: 1243, locationId: 'cdo1', boxCount: 15, status: 'sealed', createdAt: '2026-11-19T08:30:00Z' },
+  { id: 'c2', cartonNumber: 1244, locationId: 'cdo1', boxCount: 16, status: 'sealed', createdAt: '2026-11-19T09:00:00Z' },
+  { id: 'c3', cartonNumber: 1245, locationId: 'cdo1', boxCount: 12, status: 'open', createdAt: '2026-11-19T09:45:00Z' },
+  { id: 'c4', cartonNumber: 891, locationId: 'cdo2', boxCount: 14, status: 'sealed', createdAt: '2026-11-19T08:15:00Z' },
+  { id: 'c5', cartonNumber: 892, locationId: 'cdo2', boxCount: 17, status: 'open', createdAt: '2026-11-19T09:30:00Z' },
+  { id: 'c6', cartonNumber: 567, locationId: 'cdo3', boxCount: 15, status: 'sealed', createdAt: '2026-11-18T16:00:00Z', loadedAt: '2026-11-18T18:00:00Z', bolId: 'bol1' },
+  { id: 'c7', cartonNumber: 568, locationId: 'cdo3', boxCount: 13, status: 'loaded', createdAt: '2026-11-18T16:30:00Z', loadedAt: '2026-11-18T18:00:00Z', bolId: 'bol1' },
 ];
 
 export const BOLS: BOL[] = [

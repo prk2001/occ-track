@@ -32,22 +32,22 @@ export default function Dashboard() {
 
   return (
     <Layout>
-      <div className="px-4 py-4 max-w-4xl mx-auto space-y-5 pb-24">
-        {/* Role indicator */}
-        <div className="flex items-center gap-2 flex-wrap">
+      <div className="px-4 py-4 max-w-5xl mx-auto space-y-6 pb-24">
+        {/* Role indicator — editorial badge bar */}
+        <div className="flex items-center gap-2 flex-wrap pt-1">
           <span
-            className="inline-flex items-center gap-1.5 text-[10px] font-semibold px-3 py-1 rounded-full"
+            className="inline-flex items-center gap-1.5 text-[10px] font-semibold px-3 py-1 rounded-full tracking-wider uppercase"
             style={{ backgroundColor: rc.bgColor, color: rc.color }}
           >
             <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: rc.color }} />
-            {rc.label} View
+            {rc.label}
           </span>
           {isNational && (
-            <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-sp-red bg-sp-red-light px-2 py-1 rounded-full uppercase tracking-wider">
-              National
+            <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-sp-red bg-sp-red-light px-2 py-1 rounded-full uppercase tracking-[0.18em]">
+              National View
             </span>
           )}
-          <span className="text-xs text-slate">— {rc.description}</span>
+          <span className="text-xs text-ink-light italic">{rc.description}</span>
         </div>
 
         {renderDashboard(role)}

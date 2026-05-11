@@ -19,7 +19,7 @@ export default function Footer() {
           Drop-off Leaders, and Greeters during Collection Week.
         </p>
 
-        <p className="text-[11px] italic text-sp-red font-semibold tracking-wide">
+        <p className="font-display-italic text-2xl text-sp-red leading-none my-1">
           In Jesus&apos; Name.
         </p>
 

@@ -82,7 +82,7 @@ export default function LiveTracker() {
           >
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/50 mb-2">Shoeboxes Collected Nationwide</p>
             <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-3">
-              <span className="text-[clamp(2.5rem,11vw,4.5rem)] font-bold tabular-nums leading-none">
+              <span className="font-display text-[clamp(2.75rem,12vw,5rem)] font-medium tabular-nums leading-[0.95]">
                 {animated.toLocaleString()}
               </span>
               <span className="text-base text-white/60 tabular-nums">/ {formatCount(NATIONAL_GOAL)}</span>
@@ -117,7 +117,7 @@ export default function LiveTracker() {
                       <span className="text-xs font-medium text-white/80">{r.name}</span>
                       <span className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
                     </div>
-                    <p className="text-2xl font-bold tabular-nums">{formatCount(r.shoeboxCount)}</p>
+                    <p className="font-display text-3xl font-medium tabular-nums leading-none">{formatCount(r.shoeboxCount)}</p>
                     <p className="text-[10px] text-white/40 tabular-nums">{pct.toFixed(0)}% of goal</p>
                     <div className="h-10 -mx-2 mt-2 opacity-90">
                       <ResponsiveContainer width="100%" height="100%">
