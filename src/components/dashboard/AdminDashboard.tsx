@@ -5,14 +5,20 @@ import {
   REGION_DATA, SPARKLINE_DATA, NATIONAL_GOAL, ACTIVITY_FEED,
   formatCount, timeAgo, CARTONS, BOLS, LOCATIONS, COLLECTION_DAY, COLLECTION_TOTAL_DAYS,
 } from '@/data/mockData';
+import { useAuth } from '@/hooks/useAuth';
 import HeritageStrip from '@/components/HeritageStrip';
 import BibleVerse from '@/components/BibleVerse';
+import WarmGreeting from '@/components/WarmGreeting';
+import ImpactCallout from '@/components/ImpactCallout';
+import HappyChild from '@/components/illustrations/HappyChild';
+import ChristmasStar from '@/components/illustrations/ChristmasStar';
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.08 } } };
 const item = { hidden: { opacity: 0, x: 20 }, show: { opacity: 1, x: 0, transition: { duration: 0.3, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] } } };
 const listItem = { hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0 } };
 
 export default function AdminDashboard() {
+  const { user } = useAuth();
   const total = REGION_DATA.reduce((s, r) => s + r.shoeboxCount, 0);
   const activeCDOs = LOCATIONS.filter(l => l.type === 'central' && l.status === 'active').length;
   const totalCDOs = LOCATIONS.filter(l => l.type === 'central').length;
@@ -28,25 +34,25 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Editorial hero */}
+      {/* Warm personal hero — people first, numbers second */}
       <motion.section
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-        className="pt-2"
+        className="relative pt-2 grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-6 items-center"
       >
-        <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-sp-red mb-2">
-          Collection Week 2026 · Day {COLLECTION_DAY} of {COLLECTION_TOTAL_DAYS}
-        </p>
-        <h1 className="font-display text-[clamp(2rem,5vw,3rem)] leading-[1.05] font-medium text-ink tracking-tight">
-          Every box, every state,
-          <br />
-          <span className="italic font-normal text-sp-red">in real time.</span>
-        </h1>
-        <p className="mt-3 text-sm sm:text-base text-ink-light max-w-xl leading-relaxed">
-          A bird&apos;s-eye view of the {LOCATIONS.filter(l => l.type === 'central').length} Central Drop-offs and the volunteers,
-          churches, and families filling them this week.
-        </p>
+        <ChristmasStar className="hidden sm:block absolute -top-4 right-32 opacity-60 pointer-events-none" size={56} />
+        <div className="relative">
+          <WarmGreeting
+            name={user?.name}
+            subtitle={`Collection Week 2026 · Day ${COLLECTION_DAY} of ${COLLECTION_TOTAL_DAYS}.`}
+          />
+          <h1 className="font-display text-[clamp(1.75rem,4.5vw,2.75rem)] leading-[1.1] font-medium text-ink tracking-tight mt-3">
+            {total.toLocaleString()} <span className="font-display-italic text-sp-red">smiles</span> wrapped so far this week.
+          </h1>
+          <ImpactCallout count={total} size="lg" className="mt-3 max-w-xl" />
+        </div>
+        <HappyChild className="hidden sm:block shrink-0" size={140} />
       </motion.section>
 
       <HeritageStrip />

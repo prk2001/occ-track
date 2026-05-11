@@ -17,6 +17,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/live': 'Live Tracker',
   '/volunteers': 'Volunteers',
   '/clock': 'Clock In / Out',
+  '/signup': 'Volunteer Sign-up',
   '/states': 'States',
   '/settings': 'Settings',
 };

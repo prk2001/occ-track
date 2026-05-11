@@ -1,11 +1,12 @@
-import { useNavigate } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import { motion } from 'framer-motion';
 import {
-  Crown, ShieldCheck, MapPin, Church, Truck, UserCheck, ArrowRight, Sparkles,
+  Crown, ShieldCheck, MapPin, Church, Truck, UserCheck, ArrowRight, Sparkles, HandHeart,
 } from 'lucide-react';
 import Layout from '@/components/Layout';
 import Logo from '@/components/Logo';
 import BibleVerse from '@/components/BibleVerse';
+import ShoeboxStack from '@/components/illustrations/ShoeboxStack';
 import { useAuth } from '@/hooks/useAuth';
 import { ROLE_CONFIG, COLLECTION_WEEK_START, COLLECTION_WEEK_END } from '@/data/mockData';
 import type { UserRole } from '@/data/mockData';
@@ -65,21 +66,29 @@ export default function Login() {
             <Logo size={42} />
           </motion.div>
 
-          {/* Editorial hero */}
+          {/* Warm welcome hero with shoebox illustration */}
           <motion.section
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ ...heroTransition, delay: 0.1 }}
-            className="text-center max-w-3xl mx-auto space-y-3"
+            className="text-center max-w-3xl mx-auto space-y-4"
           >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.85, y: -8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              transition={{ delay: 0.05, duration: 0.7, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
+              className="flex justify-center"
+            >
+              <ShoeboxStack size={120} />
+            </motion.div>
             <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-sp-red flex items-center justify-center gap-2">
               <Sparkles className="w-3 h-3" />
               Collection Week {new Date(COLLECTION_WEEK_START).getFullYear()}
               <Sparkles className="w-3 h-3" />
             </p>
             <h1 className="font-display text-[clamp(2.25rem,6vw,3.75rem)] font-medium text-ink leading-[1.05] tracking-tight">
-              Every shoebox tells a story.
-              <span className="font-display-italic block text-sp-red mt-1">Yours starts here.</span>
+              Welcome back, friend.
+              <span className="font-display-italic block text-sp-red mt-1">A child is waiting on you.</span>
             </h1>
             <p className="text-base text-ink-light italic max-w-xl mx-auto leading-relaxed">
               {formatWeek(COLLECTION_WEEK_START, COLLECTION_WEEK_END)} · The official Collection Week
@@ -156,6 +165,33 @@ export default function Login() {
               })}
             </motion.ul>
           </div>
+
+          {/* Sign up to volunteer (pre-Collection Week recruiting) */}
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5, duration: 0.5 }}
+            className="mt-10 max-w-2xl mx-auto"
+          >
+            <Link
+              to="/signup"
+              className="group flex items-center gap-4 bg-bg-card rounded-2xl border-2 border-dashed border-sp-red/40 px-5 py-4 hover:border-sp-red hover:bg-sp-red-light/30 transition-all"
+            >
+              <div className="w-12 h-12 rounded-2xl bg-sp-red-light flex items-center justify-center shrink-0">
+                <HandHeart className="w-6 h-6 text-sp-red" />
+              </div>
+              <div className="flex-1 min-w-0 text-left">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-sp-red mb-0.5">Not on a team yet?</p>
+                <p className="font-display text-lg font-medium text-ink leading-tight">
+                  Sign up to volunteer this Collection Week
+                </p>
+                <p className="text-[11px] text-ink-light italic mt-0.5">
+                  Pick your days, pick your role — we&apos;ll handle the rest.
+                </p>
+              </div>
+              <ArrowRight className="w-5 h-5 text-ink-light/50 group-hover:text-sp-red group-hover:translate-x-1 transition-all shrink-0" />
+            </Link>
+          </motion.div>
 
           {/* Footer ribbon */}
           <motion.p
