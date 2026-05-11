@@ -1,0 +1,110 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --sp-red: #C8102E;
+    --sp-red-dark: #A00D24;
+    --sp-red-light: #FDE8EB;
+    --occ-green: #1A6B3C;
+    --occ-green-dark: #14522E;
+    --occ-green-light: #E6F5EC;
+    --gold: #D97706;
+    --gold-light: #FEF3C7;
+    --navy: #1E293B;
+    --slate: #475569;
+    --slate-light: #94A3B8;
+    --bg-primary: #F8FAFC;
+    --bg-card: #FFFFFF;
+    --bg-navy: #0F172A;
+    --border-color: #E2E8F0;
+    --border-focus: #C8102E;
+    --blue-accent: #2563EB;
+    --blue-light: #EFF6FF;
+    --purple-accent: #7C3AED;
+    --purple-light: #F3EEFD;
+
+    --background: 0 0% 100%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 350 85% 43%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 210 40% 96%;
+    --accent-foreground: 222 47% 11%;
+    --destructive: 350 85% 43%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 350 85% 43%;
+    --radius: 0.625rem;
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 350 85% 43%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 210 40% 96%;
+    --sidebar-accent-foreground: 222 47% 11%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 350 85% 43%;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply bg-bg-primary text-navy font-sans antialiased;
+    font-feature-settings: "tnum" 1;
+    overscroll-behavior-y: none;
+  }
+
+  * {
+    @apply border-border-custom;
+  }
+
+  /* Tabular nums for all numeric displays */
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Reduced motion support */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .snap-x-mandatory {
+    scroll-snap-type: x mandatory;
+  }
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  .touch-target-lg {
+    min-height: 52px;
+    min-width: 52px;
+  }
+}
