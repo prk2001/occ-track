@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   ClipboardList, Calendar, Users, Lock, Unlock, CalendarOff, Plus, X, Phone, Mail,
   CheckCircle2, AlertCircle, Shield, Sparkles, ChevronRight, MessageCircle, Trash2,
-  Pencil, Search, Mail as MailIcon, RotateCcw, Printer,
+  Pencil, Search, Mail as MailIcon, RotateCcw, Printer, Download, ArrowDownAZ, ArrowDown01,
 } from 'lucide-react';
 import Layout from '@/components/Layout';
 import { useAuth } from '@/hooks/useAuth';
@@ -54,6 +54,39 @@ export default function Signups() {
   const [blockingDate, setBlockingDate] = useState<string | null>(null);
   const [editingTimeDate, setEditingTimeDate] = useState<string | null>(null);
   const [query, setQuery] = useState('');
+  const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'name'>('newest');
+
+  function downloadCSV() {
+    if (signups.length === 0) return;
+    const escape = (v: string | number | boolean | null | undefined) => {
+      if (v === null || v === undefined) return '';
+      const s = String(v).replace(/"/g, '""');
+      return /[",\n]/.test(s) ? `"${s}"` : s;
+    };
+    const header = ['Name', 'Email', 'Phone', 'ZIP', 'First Time?', 'Shirt', 'Emergency Name', 'Emergency Phone', 'Notes', 'Submitted'];
+    const rows = signups.map((s) => [
+      s.name,
+      s.email,
+      s.phone,
+      s.zip ?? '',
+      s.firstTime === true ? 'Yes' : s.firstTime === false ? 'No' : '',
+      s.shirtSize ?? '',
+      s.emergencyName ?? '',
+      s.emergencyPhone ?? '',
+      s.notes ?? '',
+      new Date(s.submittedAt).toLocaleString(),
+    ].map(escape).join(','));
+    const csv = [header.join(','), ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `occ-signups-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
 
   function updateDayTime(date: string, value: string) {
     setDayTimes((prev) => ({ ...prev, [date]: value }));
@@ -77,13 +110,20 @@ export default function Signups() {
     window.location.href = `mailto:?bcc=${encodeURIComponent(emails)}&subject=${encodeURIComponent('Collection Week 2026 — Volunteer Update')}`;
   }
 
-  const filteredSignups = signups.filter((s) => {
-    const q = query.trim().toLowerCase();
-    if (!q) return true;
-    return [s.name, s.email, s.phone, s.notes, s.emergencyName].some((f) =>
-      f?.toLowerCase().includes(q)
-    );
-  });
+  const filteredSignups = signups
+    .filter((s) => {
+      const q = query.trim().toLowerCase();
+      if (!q) return true;
+      return [s.name, s.email, s.phone, s.notes, s.emergencyName].some((f) =>
+        f?.toLowerCase().includes(q)
+      );
+    })
+    .sort((a, b) => {
+      if (sortBy === 'name') return a.name.localeCompare(b.name);
+      const ta = new Date(a.submittedAt).getTime();
+      const tb = new Date(b.submittedAt).getTime();
+      return sortBy === 'newest' ? tb - ta : ta - tb;
+    });
 
   const blocksByDate = useMemo(() => {
     const m = new Map<string, DayBlock>();
@@ -212,7 +252,14 @@ export default function Signups() {
                   </p>
                 </div>
                 {signups.length > 0 && (
-                  <div className="flex items-center gap-2 print-hide">
+                  <div className="flex items-center gap-2 print-hide flex-wrap">
+                    <button
+                      onClick={downloadCSV}
+                      className="h-9 px-3 bg-bg-primary border border-border-custom hover:border-blue-accent hover:text-blue-accent text-ink-light text-xs font-bold rounded-xl flex items-center gap-1.5 uppercase tracking-wider transition-all"
+                    >
+                      <Download className="w-3 h-3" />
+                      CSV
+                    </button>
                     <button
                       onClick={() => window.print()}
                       className="h-9 px-3 bg-bg-primary border border-border-custom hover:border-occ-green hover:text-occ-green text-ink-light text-xs font-bold rounded-xl flex items-center gap-1.5 uppercase tracking-wider transition-all"
@@ -246,14 +293,21 @@ export default function Signups() {
                 )}
               </header>
               {signups.length > 0 && (
-                <div className="relative mb-3">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-light/60 pointer-events-none" />
-                  <input
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    placeholder="Search name, email, phone, or notes…"
-                    className="w-full h-10 pl-10 pr-3 bg-bg-card border border-border-custom rounded-xl text-sm focus:outline-none focus:border-sp-red transition-colors"
-                  />
+                <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2 mb-3 print-hide">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-light/60 pointer-events-none" />
+                    <input
+                      value={query}
+                      onChange={(e) => setQuery(e.target.value)}
+                      placeholder="Search name, email, phone, or notes…"
+                      className="w-full h-10 pl-10 pr-3 bg-bg-card border border-border-custom rounded-xl text-sm focus:outline-none focus:border-sp-red transition-colors"
+                    />
+                  </div>
+                  <div className="flex items-center gap-1 bg-bg-card border border-border-custom rounded-xl px-1">
+                    <SortChip active={sortBy === 'newest'} onClick={() => setSortBy('newest')} label="Newest" icon={<ArrowDown01 className="w-3 h-3" />} />
+                    <SortChip active={sortBy === 'oldest'} onClick={() => setSortBy('oldest')} label="Oldest" icon={<ArrowDown01 className="w-3 h-3 rotate-180" />} />
+                    <SortChip active={sortBy === 'name'} onClick={() => setSortBy('name')} label="A–Z" icon={<ArrowDownAZ className="w-3 h-3" />} />
+                  </div>
                 </div>
               )}
 
@@ -499,6 +553,21 @@ function SignupCard({ signup, onRemove }: { signup: StoredSignup; onRemove: () =
         </button>
       </div>
     </motion.li>
+  );
+}
+
+// ─── Sort chip ──────────────────────────────────────────────────────────────
+function SortChip({ active, onClick, label, icon }: { active: boolean; onClick: () => void; label: string; icon: React.ReactNode }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-1.5 h-8 px-3 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all ${
+        active ? 'bg-ink text-white' : 'text-ink-light hover:text-ink'
+      }`}
+    >
+      {icon}
+      {label}
+    </button>
   );
 }
 
