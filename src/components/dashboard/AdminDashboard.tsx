@@ -49,8 +49,8 @@ export default function AdminDashboard() {
           />
           <h1 className="font-display text-[clamp(1.75rem,4.5vw,2.75rem)] leading-[1.05] text-ink tracking-tight mt-3">
             {total.toLocaleString()}
-            <span className="block font-display-italic text-sp-red text-[clamp(1.25rem,3vw,1.75rem)] mt-1">
-              individual presentations of the Gospel
+            <span className="block font-display-italic text-sp-red text-[clamp(1.5rem,3.5vw,2.25rem)] mt-1">
+              Gospel Opportunities
             </span>
             <span className="block text-base font-normal text-ink-light mt-1">wrapped so far this week.</span>
           </h1>

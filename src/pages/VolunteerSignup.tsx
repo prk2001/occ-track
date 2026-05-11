@@ -11,7 +11,6 @@ import ShoeboxStack from '@/components/illustrations/ShoeboxStack';
 import ChristmasStar from '@/components/illustrations/ChristmasStar';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import {
-  COLLECTION_DAYS,
   COLLECTION_WEEK_START,
   COLLECTION_WEEK_END,
 } from '@/data/mockData';
@@ -21,17 +20,14 @@ import {
 // Cartonizer, etc.) on the day based on need and experience. Most
 // volunteers never get OCC Track app access; only Greeters use the app
 // at the welcome table for check-ins.
-type Step = 'intro' | 'contact' | 'days' | 'details' | 'done';
+type Step = 'intro' | 'contact' | 'details' | 'done';
 type ShirtSize = 'S' | 'M' | 'L' | 'XL' | 'XXL';
-type HoursPref = 'morning' | 'afternoon' | 'evening' | 'any';
 
 interface SignupDraft {
   name: string;
   email: string;
   phone: string;
   zip: string;
-  days: string[];
-  hoursPref: HoursPref;
   firstTime: boolean | null;
   shirtSize: ShirtSize | '';
   emergencyName: string;
@@ -47,7 +43,6 @@ interface StoredSignup extends SignupDraft {
 
 const EMPTY_DRAFT: SignupDraft = {
   name: '', email: '', phone: '', zip: '',
-  days: [], hoursPref: 'any',
   firstTime: null, shirtSize: '',
   emergencyName: '', emergencyPhone: '', notes: '',
   agree: false,
@@ -88,7 +83,6 @@ export default function VolunteerSignup() {
 
   // Step gating
   const contactOk = draft.name.trim().length > 1 && /.+@.+\..+/.test(draft.email) && draft.phone.trim().length >= 7;
-  const daysOk = draft.days.length > 0;
   const finalOk = draft.agree;
 
   return (
@@ -127,18 +121,8 @@ export default function VolunteerSignup() {
                 draft={draft}
                 onPatch={patch}
                 onBack={() => setStep('intro')}
-                onNext={() => setStep('days')}
-                ok={contactOk}
-              />
-            )}
-            {step === 'days' && (
-              <DaysStep
-                key="days"
-                draft={draft}
-                onPatch={patch}
-                onBack={() => setStep('contact')}
                 onNext={() => setStep('details')}
-                ok={daysOk}
+                ok={contactOk}
               />
             )}
             {step === 'details' && (
@@ -146,7 +130,7 @@ export default function VolunteerSignup() {
                 key="details"
                 draft={draft}
                 onPatch={patch}
-                onBack={() => setStep('days')}
+                onBack={() => setStep('contact')}
                 onSubmit={submit}
                 ok={finalOk}
               />
@@ -171,15 +155,15 @@ export default function VolunteerSignup() {
 
 // ─── Step progress bar ────────────────────────────────────────────────────────
 function StepBar({ step }: { step: Step }) {
-  const stepIndex = { intro: 0, contact: 1, days: 2, details: 3, done: 4 }[step];
+  const stepIndex = { intro: 0, contact: 1, details: 2, done: 3 }[step];
   return (
     <div className="mb-6 space-y-2">
       <div className="flex items-center justify-between text-[10px] font-semibold uppercase tracking-[0.18em] text-ink-light">
-        <span>Step {stepIndex} of 3</span>
-        <span>{['', 'About you', 'Your days', 'A few more things'][stepIndex]}</span>
+        <span>Step {stepIndex} of 2</span>
+        <span>{['', 'About you', 'A few more things'][stepIndex]}</span>
       </div>
       <div className="flex gap-1.5">
-        {[1, 2, 3].map((i) => (
+        {[1, 2].map((i) => (
           <span
             key={i}
             className={`h-1 flex-1 rounded-full transition-colors ${
@@ -311,85 +295,7 @@ function ContactStep({
   );
 }
 
-// ─── Step 2: Days ────────────────────────────────────────────────────────────
-function DaysStep({
-  draft, onPatch, onBack, onNext, ok,
-}: {
-  draft: SignupDraft;
-  onPatch: (p: Partial<SignupDraft>) => void;
-  onBack: () => void;
-  onNext: () => void;
-  ok: boolean;
-}) {
-  function toggleDay(date: string) {
-    onPatch({
-      days: draft.days.includes(date) ? draft.days.filter((d) => d !== date) : [...draft.days, date],
-    });
-  }
-  return (
-    <StepShell title="When can you help?" italic="Tap every day you can serve." onBack={onBack}>
-      <div className="grid grid-cols-4 gap-2">
-        {COLLECTION_DAYS.map((d) => {
-          const active = draft.days.includes(d.date);
-          return (
-            <button
-              key={d.date}
-              onClick={() => toggleDay(d.date)}
-              className={`relative flex flex-col items-center justify-center h-20 rounded-2xl border-2 transition-all ${
-                active
-                  ? 'bg-sp-red text-white border-sp-red shadow-card'
-                  : 'bg-bg-card text-ink border-border-custom hover:border-sp-red/50'
-              }`}
-            >
-              <span className="text-[10px] font-bold uppercase tracking-[0.15em] opacity-80">{d.weekday}</span>
-              <span className={`font-display text-2xl font-medium tabular-nums leading-none mt-0.5 ${active ? 'text-white' : 'text-ink'}`}>{d.monthDay}</span>
-              <span className={`text-[9px] mt-1 ${active ? 'text-white/80' : 'text-ink-light'}`}>Nov</span>
-              {active && (
-                <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-bg-card border-2 border-sp-red flex items-center justify-center">
-                  <CheckCircle2 className="w-3 h-3 text-sp-red" />
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
-
-      <div>
-        <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-ink-light mb-2">Time of day you prefer</p>
-        <div className="grid grid-cols-4 gap-1.5">
-          {([
-            { v: 'morning', label: 'Morning' },
-            { v: 'afternoon', label: 'Afternoon' },
-            { v: 'evening', label: 'Evening' },
-            { v: 'any', label: 'Any time' },
-          ] as { v: HoursPref; label: string }[]).map((opt) => (
-            <button
-              key={opt.v}
-              onClick={() => onPatch({ hoursPref: opt.v })}
-              className={`h-10 rounded-xl text-xs font-semibold transition-all border ${
-                draft.hoursPref === opt.v
-                  ? 'bg-ink text-bg-card border-ink'
-                  : 'bg-bg-card text-ink-light border-border-custom hover:border-ink/40'
-              }`}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <p className="text-[11px] text-ink-light italic px-1 text-center">
-        {draft.days.length === 0
-          ? 'Pick at least one day to continue.'
-          : `Wonderful — that's ${draft.days.length} ${draft.days.length === 1 ? 'day' : 'days'} of impact.`}
-      </p>
-
-      <PrimaryNext label="Continue" onClick={onNext} disabled={!ok} />
-    </StepShell>
-  );
-}
-
-// ─── Step 3: Details ──────────────────────────────────────────────────────────
+// ─── Step 2: Details ──────────────────────────────────────────────────────────
 function DetailsStep({
   draft, onPatch, onBack, onSubmit, ok,
 }: {
@@ -533,8 +439,8 @@ function DoneStep({ signup, onAnother }: { signup?: StoredSignup; onAnother: () 
 
       <div className="bg-bg-card rounded-2xl shadow-card border border-border-custom p-5 max-w-md mx-auto text-left space-y-2">
         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-sp-red mb-1">Quick summary</p>
-        <SummaryLine label="Days" value={signup?.days.length ? signup.days.length + ' day' + (signup.days.length === 1 ? '' : 's') : '—'} />
-        <SummaryLine label="Time of day" value={signup?.hoursPref ?? '—'} capitalize />
+        <SummaryLine label="Phone" value={signup?.phone ?? '—'} />
+        <SummaryLine label="Email" value={signup?.email ?? '—'} />
         <SummaryLine label="Shirt" value={signup?.shirtSize || '—'} />
       </div>
 
