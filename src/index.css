@@ -4,59 +4,72 @@
 
 @layer base {
   :root {
+    /* Brand palette — aligned with OCC26 official banner system */
     --sp-red: #C8102E;
     --sp-red-dark: #A00D24;
     --sp-red-light: #FDE8EB;
-    --occ-green: #1A6B3C;
-    --occ-green-dark: #14522E;
-    --occ-green-light: #E6F5EC;
+
+    /* Greens — deeper, more forest, matching the curved banner shape */
+    --occ-green: #1B5E20;
+    --occ-green-dark: #0F3D14;
+    --occ-green-light: #E8F5E9;
+
+    /* Lime accent — the primary CTA color in the banners */
+    --lime: #84CC16;
+    --lime-dark: #65A30D;
+    --lime-light: #ECFCCB;
+
     --gold: #D97706;
     --gold-light: #FEF3C7;
-    --navy: #1E293B;
-    --slate: #475569;
+    --navy: #111111;
+    --slate: #525252;
     --slate-light: #94A3B8;
-    --bg-primary: #FAF7F2;
+
+    /* Surfaces — white-dominant now (was cream) */
+    --bg-primary: #FFFFFF;
     --bg-card: #FFFFFF;
+    --bg-dotted: #F7F8F5;
     --bg-cream: #F4EDE0;
     --bg-warm: #FBF6EC;
     --bg-navy: #0F172A;
-    --ink: #1A1714;
-    --ink-light: #3D3530;
-    --border-color: #E8DFCF;
-    --border-focus: #C8102E;
+    --ink: #111111;
+    --ink-light: #525252;
+    --border-color: #E5E7EB;
+    --border-focus: #1B5E20;
+
     --blue-accent: #2563EB;
     --blue-light: #EFF6FF;
     --purple-accent: #7C3AED;
     --purple-light: #F3EEFD;
 
     --background: 0 0% 100%;
-    --foreground: 222 47% 11%;
+    --foreground: 0 0% 7%;
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card-foreground: 0 0% 7%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
-    --primary: 350 85% 43%;
+    --popover-foreground: 0 0% 7%;
+    --primary: 122 56% 23%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222 47% 11%;
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
-    --accent: 210 40% 96%;
-    --accent-foreground: 222 47% 11%;
+    --secondary: 0 0% 96%;
+    --secondary-foreground: 0 0% 7%;
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 32%;
+    --accent: 0 0% 96%;
+    --accent-foreground: 0 0% 7%;
     --destructive: 350 85% 43%;
     --destructive-foreground: 0 0% 100%;
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 350 85% 43%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 122 56% 23%;
     --radius: 0.625rem;
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 350 85% 43%;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 0 0% 7%;
+    --sidebar-primary: 122 56% 23%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 210 40% 96%;
-    --sidebar-accent-foreground: 222 47% 11%;
+    --sidebar-accent: 0 0% 96%;
+    --sidebar-accent-foreground: 0 0% 7%;
     --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 350 85% 43%;
+    --sidebar-ring: 122 56% 23%;
   }
 
   html {
@@ -65,50 +78,74 @@
   }
 
   body {
-    @apply bg-bg-primary text-navy font-sans antialiased;
-    font-feature-settings: "tnum" 1, "ss01" 1, "ss02" 1, "cv11" 1;
+    @apply bg-bg-primary text-ink font-sans antialiased;
+    font-feature-settings: "tnum" 1, "ss01" 1, "kern" 1;
     overscroll-behavior-y: none;
   }
 
-  /* Editorial display type — use sparingly for hero/numeric moments */
+  /* Heavy display type — matches the bold sans-serif headlines in the
+     OCC26 banner system. Reuses the .font-display class everywhere it
+     already exists in the JSX so we don't have to touch every file. */
   .font-display {
-    font-family: 'Fraunces', ui-serif, Georgia, serif;
-    font-feature-settings: "ss01" 1, "ss03" 1, "tnum" 1, "kern" 1;
-    font-variation-settings: "opsz" 144, "SOFT" 30, "WONK" 0;
-    letter-spacing: -0.02em;
+    font-family: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+    font-weight: 800;
+    font-variation-settings: "opsz" 40;
+    letter-spacing: -0.025em;
+    line-height: 0.95;
   }
 
   .font-display-soft {
-    font-family: 'Fraunces', ui-serif, Georgia, serif;
-    font-feature-settings: "ss01" 1, "kern" 1;
-    font-variation-settings: "opsz" 72, "SOFT" 100, "WONK" 0;
+    font-family: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+  }
+
+  /* Italic emphasis kept as a class but it's now DM Sans Italic at
+     bold weight, not Fraunces. Matches the date-pill subhead style
+     in the banners ("November 16–23, 2026" in italic-feel). */
+  .font-display-italic {
+    font-family: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+    font-weight: 700;
+    font-style: italic;
     letter-spacing: -0.01em;
   }
 
-  .font-display-italic {
-    font-family: 'Fraunces', ui-serif, Georgia, serif;
-    font-style: italic;
-    font-feature-settings: "kern" 1;
-    font-variation-settings: "opsz" 72, "SOFT" 50, "WONK" 1;
+  /* OCC26 signature dotted-grid background. Subtle when paired with
+     white surfaces; gives pages the same texture as the campaign banners. */
+  .bg-dotted-grid {
+    background-color: #FFFFFF;
+    background-image: radial-gradient(circle, #E5E7EB 1px, transparent 1.2px);
+    background-size: 20px 20px;
+    background-position: 0 0;
   }
 
-  /* Subtle paper-texture vibe on cream backgrounds */
-  .texture-paper {
-    background-image:
-      radial-gradient(circle at 20% 30%, rgba(200, 16, 46, 0.02) 0%, transparent 40%),
-      radial-gradient(circle at 80% 70%, rgba(26, 107, 60, 0.02) 0%, transparent 40%);
+  /* Tighter version for cards/hero panels */
+  .bg-dotted-grid-tight {
+    background-color: #F7F8F5;
+    background-image: radial-gradient(circle, #DDE3D7 1px, transparent 1.2px);
+    background-size: 14px 14px;
+  }
+
+  /* Date-pill style from the banners — outlined green pill on white */
+  .pill-date {
+    border: 2px solid #1B5E20;
+    color: #1B5E20;
+    background: #FFFFFF;
+    padding: 0.35rem 1rem;
+    border-radius: 9999px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    display: inline-block;
   }
 
   * {
     @apply border-border-custom;
   }
 
-  /* Tabular nums for all numeric displays */
   .tabular-nums {
     font-variant-numeric: tabular-nums;
   }
 
-  /* Reduced motion support */
   @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
@@ -140,4 +177,14 @@
     min-height: 52px;
     min-width: 52px;
   }
+
+  /* Lime CTA — the signature "Pack a Shoebox" button style from the banners */
+  .btn-lime {
+    background-color: #84CC16;
+    color: #0F3D14;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    transition: background-color 0.15s ease;
+  }
+  .btn-lime:hover { background-color: #65A30D; color: #FFFFFF; }
 }

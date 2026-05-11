@@ -5,8 +5,8 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Geist', 'ui-sans-serif', 'system-ui', '-apple-system', 'sans-serif'],
-        display: ['Fraunces', 'ui-serif', 'Georgia', 'serif'],
+        sans: ['DM Sans', 'Geist', 'ui-sans-serif', 'system-ui', '-apple-system', 'sans-serif'],
+        display: ['DM Sans', 'ui-sans-serif', 'system-ui', 'sans-serif'],
       },
       colors: {
         'sp-red': {
@@ -15,29 +15,36 @@ module.exports = {
           light: '#FDE8EB',
         },
         'occ-green': {
-          DEFAULT: '#1A6B3C',
-          dark: '#14522E',
-          light: '#E6F5EC',
+          DEFAULT: '#1B5E20',
+          dark: '#0F3D14',
+          light: '#E8F5E9',
+          deep: '#0F3D14',
+        },
+        'lime': {
+          DEFAULT: '#84CC16',
+          dark: '#65A30D',
+          light: '#ECFCCB',
         },
         'gold': {
           DEFAULT: '#D97706',
           light: '#FEF3C7',
         },
         'navy': {
-          DEFAULT: '#1E293B',
+          DEFAULT: '#111111',
           dark: '#0F172A',
         },
         'slate': {
           DEFAULT: '#475569',
           light: '#94A3B8',
         },
-        'bg-primary': '#FAF7F2',
+        'bg-primary': '#FFFFFF',
         'bg-card': '#FFFFFF',
         'bg-cream': '#F4EDE0',
         'bg-warm': '#FBF6EC',
+        'bg-dotted': '#F7F8F5',
         'bg-navy': '#0F172A',
-        'ink': { DEFAULT: '#1A1714', light: '#3D3530' },
-        'border-custom': '#E8DFCF',
+        'ink': { DEFAULT: '#111111', light: '#525252' },
+        'border-custom': '#E5E7EB',
         'border-warm': '#D9CDB5',
         'border-focus': '#C8102E',
         'blue-accent': '#2563EB',

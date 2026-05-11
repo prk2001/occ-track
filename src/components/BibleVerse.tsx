@@ -54,10 +54,10 @@ export default function BibleVerse({ tone = 'cream' }: { tone?: 'cream' | 'dark'
       className={`relative rounded-2xl px-6 py-7 sm:px-8 sm:py-8 overflow-hidden ${
         isDark
           ? 'bg-white/[0.03] border border-white/10'
-          : 'bg-bg-warm border border-border-warm'
+          : 'bg-white border-l-4 border-occ-green shadow-card'
       }`}
     >
-      <Quote className={`absolute top-4 left-4 w-6 h-6 ${isDark ? 'text-sp-red/40' : 'text-sp-red/30'}`} aria-hidden="true" />
+      <Quote className={`absolute top-4 left-4 w-6 h-6 ${isDark ? 'text-occ-green/40' : 'text-occ-green/40'}`} aria-hidden="true" />
       <blockquote className="relative pl-6">
         <p
           className={`font-display-italic text-lg sm:text-xl leading-[1.4] ${
@@ -67,9 +67,9 @@ export default function BibleVerse({ tone = 'cream' }: { tone?: 'cream' | 'dark'
           &ldquo;{verse.text}&rdquo;
         </p>
         <figcaption className="mt-4 flex items-center gap-2">
-          <span className={`h-px w-6 ${isDark ? 'bg-white/30' : 'bg-sp-red'}`} aria-hidden="true" />
+          <span className={`h-px w-6 ${isDark ? 'bg-white/30' : 'bg-occ-green'}`} aria-hidden="true" />
           <cite className={`text-[11px] font-semibold uppercase tracking-[0.18em] not-italic ${
-            isDark ? 'text-white/70' : 'text-sp-red'
+            isDark ? 'text-white/70' : 'text-occ-green'
           }`}>
             {verse.reference}
           </cite>

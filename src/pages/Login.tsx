@@ -179,21 +179,23 @@ export default function Login() {
           >
             <Link
               to="/signup"
-              className="group flex items-center gap-4 bg-bg-card rounded-2xl border-2 border-dashed border-sp-red/40 px-5 py-4 hover:border-sp-red hover:bg-sp-red-light/30 transition-all"
+              className="group flex items-center gap-4 bg-lime hover:bg-lime-dark transition-colors rounded-2xl px-5 py-5 shadow-card"
             >
-              <div className="w-12 h-12 rounded-2xl bg-sp-red-light flex items-center justify-center shrink-0">
-                <HandHeart className="w-6 h-6 text-sp-red" />
+              <div className="w-12 h-12 rounded-2xl bg-white/40 flex items-center justify-center shrink-0">
+                <HandHeart className="w-6 h-6 text-occ-green-dark" />
               </div>
               <div className="flex-1 min-w-0 text-left">
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-sp-red mb-0.5">Not on a team yet?</p>
-                <p className="font-display text-lg font-medium text-ink leading-tight">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-occ-green-dark mb-0.5">Not on a team yet?</p>
+                <p className="font-display text-lg leading-tight text-occ-green-dark group-hover:text-white">
                   Sign up to volunteer this Collection Week
                 </p>
-                <p className="text-[11px] text-ink-light italic mt-0.5">
+                <p className="text-[11px] text-occ-green-dark/80 group-hover:text-white/80 mt-0.5">
                   Pick your days, pick your role — we&apos;ll handle the rest.
                 </p>
               </div>
-              <ArrowRight className="w-5 h-5 text-ink-light/50 group-hover:text-sp-red group-hover:translate-x-1 transition-all shrink-0" />
+              <div className="w-10 h-10 rounded-full bg-occ-green-dark flex items-center justify-center shrink-0 group-hover:translate-x-1 transition-transform">
+                <ArrowRight className="w-5 h-5 text-white" />
+              </div>
             </Link>
           </motion.div>
 

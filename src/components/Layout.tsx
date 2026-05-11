@@ -32,7 +32,7 @@ export default function Layout({ children, hideNav }: LayoutProps) {
   const title = PAGE_TITLES[location.pathname] || 'OCC Track';
 
   return (
-    <div className="min-h-[100dvh] flex flex-col bg-bg-primary">
+    <div className="min-h-[100dvh] flex flex-col bg-dotted-grid">
       {!hideNav && <Navbar title={title} />}
       <AnimatePresence mode="wait">
         <motion.main
