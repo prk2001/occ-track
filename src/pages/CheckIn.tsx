@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   PlusCircle, Minus, Plus, CheckCircle2, ChevronLeft, ChevronRight,
-  User, UserX, Gift, Trash2, X,
+  User, UserX, Gift, Trash2, X, Church, Building2,
 } from 'lucide-react';
 import Layout from '@/components/Layout';
 import { useAuth } from '@/hooks/useAuth';
@@ -10,16 +10,30 @@ import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { SHOEBOX_ENTRIES, getLocationById, timeAgo } from '@/data/mockData';
 
 type Step = 'list' | 'donor' | 'count' | 'confirm';
+type DonorType = 'individual' | 'organization';
 
 interface SessionEntry {
   id: string;
   donorName: string;
   count: number;
   timestamp: string;
+  donorType?: DonorType;
   anonymous?: boolean;
 }
 
 const QUICK_ADDS = [1, 5, 10, 25];
+
+// Realistic OCC organization examples used as chip suggestions when the
+// greeter selects "Organization" — most real donors are churches running
+// drives, with schools, civic groups, and businesses making up the rest.
+const ORG_SUGGESTIONS = [
+  'First Baptist Church',
+  'Sandy Springs Elementary',
+  'Boy Scouts Troop 401',
+  'Rotary Club of Atlanta',
+  'Atlanta Bible Church',
+  'Mt. Zion Baptist',
+];
 
 function newId() {
   return typeof crypto !== 'undefined' && crypto.randomUUID
@@ -36,37 +50,47 @@ export default function CheckIn() {
   const [sessionEntries, updateEntries] = useLocalStorage<SessionEntry[]>('occ:session-entries', []);
 
   const [step, goToStep] = useState<Step>('list');
+  const [donorType, changeType] = useState<DonorType>('individual');
   const [donorName, changeDonor] = useState('');
   const [anonymous, toggleAnonRaw] = useState(false);
   const [count, changeCount] = useState(1);
 
   const recentDonorChips = useMemo(() => {
     const names = new Set<string>();
-    sessionEntries.slice(0, 30).forEach((e) => !e.anonymous && names.add(e.donorName));
-    SHOEBOX_ENTRIES.forEach((e) => names.add(e.donorName));
+    if (donorType === 'organization') {
+      sessionEntries.slice(0, 30).forEach((e) => e.donorType === 'organization' && names.add(e.donorName));
+      ORG_SUGGESTIONS.forEach((n) => names.add(n));
+    } else {
+      sessionEntries.slice(0, 30).forEach((e) => e.donorType !== 'organization' && !e.anonymous && names.add(e.donorName));
+      SHOEBOX_ENTRIES.forEach((e) => names.add(e.donorName));
+    }
     return Array.from(names).slice(0, 6);
-  }, [sessionEntries]);
+  }, [sessionEntries, donorType]);
 
   const todaysStats = useMemo(() => {
     const total = sessionEntries.reduce((sum, e) => sum + e.count, 0);
     const avg = sessionEntries.length > 0 ? total / sessionEntries.length : 0;
-    return { donors: sessionEntries.length, boxes: total, avg };
+    const orgs = sessionEntries.filter((e) => e.donorType === 'organization').length;
+    return { donors: sessionEntries.length, boxes: total, avg, orgs };
   }, [sessionEntries]);
 
   function reset() {
     changeDonor('');
     toggleAnonRaw(false);
     changeCount(1);
+    changeType('individual');
   }
 
   function commitEntry() {
-    const finalName = anonymous || !donorName.trim() ? 'Anonymous Donor' : donorName.trim();
+    const isAnon = donorType === 'individual' && (anonymous || !donorName.trim());
+    const fallback = donorType === 'organization' ? 'Unnamed Organization' : 'Anonymous Donor';
     const entry: SessionEntry = {
       id: newId(),
-      donorName: finalName,
+      donorName: isAnon ? fallback : donorName.trim() || fallback,
       count,
       timestamp: new Date().toISOString(),
-      anonymous: anonymous || !donorName.trim(),
+      donorType,
+      anonymous: isAnon,
     };
     updateEntries((prev) => [entry, ...prev]);
   }
@@ -75,7 +99,10 @@ export default function CheckIn() {
     updateEntries((prev) => prev.filter((e) => e.id !== id));
   }
 
-  const finalDonor = anonymous || !donorName.trim() ? 'Anonymous Donor' : donorName.trim();
+  const isOrg = donorType === 'organization';
+  const finalDonor = isOrg
+    ? donorName.trim() || 'Unnamed Organization'
+    : anonymous || !donorName.trim() ? 'Anonymous Donor' : donorName.trim();
 
   return (
     <Layout>
@@ -94,9 +121,11 @@ export default function CheckIn() {
           {step === 'donor' && (
             <DonorStep
               key="donor"
+              donorType={donorType}
               donorName={donorName}
               anonymous={anonymous}
               recentChips={recentDonorChips}
+              onChangeType={(t) => { changeType(t); changeDonor(''); toggleAnonRaw(false); }}
               onChangeName={changeDonor}
               onToggleAnon={() => toggleAnonRaw((a) => !a)}
               onCancel={() => goToStep('list')}
@@ -107,6 +136,7 @@ export default function CheckIn() {
             <CountStep
               key="count"
               donorName={finalDonor}
+              donorType={donorType}
               count={count}
               onChange={changeCount}
               onBack={() => goToStep('donor')}
@@ -117,6 +147,7 @@ export default function CheckIn() {
             <ConfirmStep
               key="confirm"
               donorName={finalDonor}
+              donorType={donorType}
               count={count}
               onAddAnother={() => { reset(); goToStep('donor'); }}
               onDone={() => { reset(); goToStep('list'); }}
@@ -132,7 +163,7 @@ function ListView({
   locationLabel, stats, entries, onStart, onDelete,
 }: {
   locationLabel: string;
-  stats: { donors: number; boxes: number; avg: number };
+  stats: { donors: number; boxes: number; avg: number; orgs: number };
   entries: SessionEntry[];
   onStart: () => void;
   onDelete: (id: string) => void;
@@ -155,10 +186,11 @@ function ListView({
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-4 gap-3">
         <Stat label="Donors" value={String(stats.donors)} tint="bg-blue-light" color="text-blue-accent" />
-        <Stat label="Boxes Today" value={String(stats.boxes)} tint="bg-occ-green-light" color="text-occ-green" />
-        <Stat label="Avg / Donor" value={stats.donors > 0 ? stats.avg.toFixed(1) : '—'} tint="bg-gold-light" color="text-gold" />
+        <Stat label="Orgs" value={String(stats.orgs)} tint="bg-purple-light" color="text-purple-accent" />
+        <Stat label="Boxes" value={String(stats.boxes)} tint="bg-occ-green-light" color="text-occ-green" />
+        <Stat label="Avg" value={stats.donors > 0 ? stats.avg.toFixed(1) : '—'} tint="bg-gold-light" color="text-gold" />
       </div>
 
       <motion.button
@@ -183,13 +215,15 @@ function ListView({
           <ul className="divide-y divide-border-custom">
             {entries.slice(0, 20).map((e) => (
               <li key={e.id} className="flex items-center gap-3 py-2.5">
-                {e.anonymous
-                  ? <UserX className="w-8 h-8 text-slate-light bg-bg-primary rounded-full p-1.5" />
-                  : <User className="w-8 h-8 text-occ-green bg-occ-green-light rounded-full p-1.5" />
-                }
+                <EntryIcon type={e.donorType} anonymous={e.anonymous} />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-navy truncate">{e.donorName}</p>
-                  <p className="text-[11px] text-slate-light">{timeAgo(e.timestamp)}</p>
+                  <p className="text-[11px] text-slate-light flex items-center gap-1.5">
+                    <span>{timeAgo(e.timestamp)}</span>
+                    {e.donorType === 'organization' && (
+                      <span className="text-purple-accent font-semibold uppercase tracking-wider text-[9px]">Organization</span>
+                    )}
+                  </p>
                 </div>
                 <span className="text-base font-bold text-navy tabular-nums">+{e.count}</span>
                 <button
@@ -208,26 +242,44 @@ function ListView({
   );
 }
 
+function EntryIcon({ type, anonymous }: { type?: DonorType; anonymous?: boolean }) {
+  if (type === 'organization') {
+    return <Church className="w-8 h-8 text-purple-accent bg-purple-light rounded-full p-1.5" />;
+  }
+  if (anonymous) {
+    return <UserX className="w-8 h-8 text-slate-light bg-bg-primary rounded-full p-1.5" />;
+  }
+  return <User className="w-8 h-8 text-occ-green bg-occ-green-light rounded-full p-1.5" />;
+}
+
 function Stat({ label, value, tint, color }: { label: string; value: string; tint: string; color: string }) {
   return (
     <div className={`${tint} rounded-2xl p-3 text-center`}>
-      <p className={`text-2xl font-bold ${color} tabular-nums`}>{value}</p>
+      <p className={`text-xl font-bold ${color} tabular-nums`}>{value}</p>
       <p className="text-[10px] text-slate mt-0.5 uppercase tracking-wider">{label}</p>
     </div>
   );
 }
 
 function DonorStep({
-  donorName, anonymous, recentChips, onChangeName, onToggleAnon, onCancel, onNext,
+  donorType, donorName, anonymous, recentChips,
+  onChangeType, onChangeName, onToggleAnon, onCancel, onNext,
 }: {
+  donorType: DonorType;
   donorName: string;
   anonymous: boolean;
   recentChips: string[];
+  onChangeType: (t: DonorType) => void;
   onChangeName: (v: string) => void;
   onToggleAnon: () => void;
   onCancel: () => void;
   onNext: () => void;
 }) {
+  const isOrg = donorType === 'organization';
+  const placeholder = isOrg ? 'e.g. First Baptist Church' : 'e.g. Johnson Family';
+  const nameLabel = isOrg ? 'Organization name' : 'Donor name';
+  const canContinue = isOrg ? donorName.trim().length > 0 : (anonymous || donorName.trim().length > 0);
+
   return (
     <motion.div
       initial={{ opacity: 0, x: 20 }}
@@ -238,40 +290,64 @@ function DonorStep({
     >
       <StepHeader step={1} totalSteps={3} title="Who is donating?" onCancel={onCancel} />
 
+      {/* Donor type segmented toggle */}
+      <div className="grid grid-cols-2 gap-2 p-1 bg-bg-primary rounded-2xl">
+        <TypeOption
+          active={!isOrg}
+          icon={<User className="w-4 h-4" />}
+          label="Individual"
+          sub="Family / person"
+          onClick={() => onChangeType('individual')}
+        />
+        <TypeOption
+          active={isOrg}
+          icon={<Church className="w-4 h-4" />}
+          label="Organization"
+          sub="Church, school, group"
+          onClick={() => onChangeType('organization')}
+        />
+      </div>
+
       <div className="bg-bg-card rounded-2xl shadow-card p-5 space-y-4">
         <label className="block">
-          <span className="text-xs font-semibold text-slate uppercase tracking-wider mb-1.5 block">Donor name</span>
+          <span className="text-xs font-semibold text-slate uppercase tracking-wider mb-1.5 block">{nameLabel}</span>
           <input
             autoFocus
             value={donorName}
             onChange={(e) => { onChangeName(e.target.value); if (anonymous) onToggleAnon(); }}
-            disabled={anonymous}
-            placeholder="e.g. Johnson Family"
+            disabled={!isOrg && anonymous}
+            placeholder={placeholder}
             className="w-full h-12 px-4 bg-bg-primary border border-border-custom rounded-xl text-base text-navy placeholder:text-slate-light focus:outline-none focus:border-sp-red transition-colors disabled:opacity-50"
           />
         </label>
 
-        <button
-          onClick={onToggleAnon}
-          className={`w-full h-11 rounded-xl border-2 text-sm font-medium transition-all flex items-center justify-center gap-2 ${
-            anonymous
-              ? 'border-slate bg-bg-primary text-navy'
-              : 'border-border-custom text-slate hover:border-slate'
-          }`}
-        >
-          <UserX className="w-4 h-4" />
-          {anonymous ? 'Anonymous (selected)' : 'Skip Name — Anonymous'}
-        </button>
+        {!isOrg && (
+          <button
+            onClick={onToggleAnon}
+            className={`w-full h-11 rounded-xl border-2 text-sm font-medium transition-all flex items-center justify-center gap-2 ${
+              anonymous
+                ? 'border-slate bg-bg-primary text-navy'
+                : 'border-border-custom text-slate hover:border-slate'
+            }`}
+          >
+            <UserX className="w-4 h-4" />
+            {anonymous ? 'Anonymous (selected)' : 'Skip Name — Anonymous'}
+          </button>
+        )}
 
         {recentChips.length > 0 && !anonymous && (
           <div>
-            <span className="text-[11px] font-semibold text-slate uppercase tracking-wider mb-2 block">Recent donors</span>
+            <span className="text-[11px] font-semibold text-slate uppercase tracking-wider mb-2 block">
+              {isOrg ? 'Suggested organizations' : 'Recent donors'}
+            </span>
             <div className="flex flex-wrap gap-2">
               {recentChips.map((name) => (
                 <button
                   key={name}
                   onClick={() => onChangeName(name)}
-                  className="px-3 py-1.5 bg-bg-primary border border-border-custom rounded-full text-xs text-navy hover:border-occ-green transition-colors"
+                  className={`px-3 py-1.5 bg-bg-primary border border-border-custom rounded-full text-xs text-navy transition-colors ${
+                    isOrg ? 'hover:border-purple-accent' : 'hover:border-occ-green'
+                  }`}
                 >
                   {name}
                 </button>
@@ -283,7 +359,7 @@ function DonorStep({
 
       <button
         onClick={onNext}
-        disabled={!anonymous && !donorName.trim()}
+        disabled={!canContinue}
         className="w-full h-14 bg-sp-red text-white text-base font-semibold rounded-2xl flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-sp-red-dark transition-colors"
       >
         Continue
@@ -293,10 +369,36 @@ function DonorStep({
   );
 }
 
+function TypeOption({
+  active, icon, label, sub, onClick,
+}: {
+  active: boolean;
+  icon: React.ReactNode;
+  label: string;
+  sub: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`px-3 py-3 rounded-xl text-left transition-all ${
+        active ? 'bg-bg-card shadow-card text-navy' : 'text-slate hover:text-navy'
+      }`}
+    >
+      <div className="flex items-center gap-2 mb-0.5">
+        <span className={active ? 'text-sp-red' : 'text-slate-light'}>{icon}</span>
+        <span className="text-sm font-semibold">{label}</span>
+      </div>
+      <p className="text-[10px] text-slate-light pl-6">{sub}</p>
+    </button>
+  );
+}
+
 function CountStep({
-  donorName, count, onChange, onBack, onNext,
+  donorName, donorType, count, onChange, onBack, onNext,
 }: {
   donorName: string;
+  donorType: DonorType;
   count: number;
   onChange: (v: number) => void;
   onBack: () => void;
@@ -304,6 +406,7 @@ function CountStep({
 }) {
   const clamp = (n: number) => Math.max(1, Math.min(999, n));
   const visualBoxes = Math.min(count, 12);
+  const TypeIcon = donorType === 'organization' ? Church : User;
 
   return (
     <motion.div
@@ -313,7 +416,11 @@ function CountStep({
       transition={{ duration: 0.25 }}
       className="space-y-5"
     >
-      <StepHeader step={2} totalSteps={3} title={`Boxes from ${donorName}?`} onBack={onBack} />
+      <StepHeader step={2} totalSteps={3} title="" onBack={onBack} />
+      <div className="-mt-3 flex items-center gap-2 text-base font-bold text-navy">
+        <TypeIcon className={`w-4 h-4 shrink-0 ${donorType === 'organization' ? 'text-purple-accent' : 'text-occ-green'}`} />
+        <span className="truncate">Boxes from {donorName}?</span>
+      </div>
 
       <div className="bg-bg-card rounded-2xl shadow-card p-6 space-y-5">
         <div className="flex items-center justify-center gap-4">
@@ -354,6 +461,14 @@ function CountStep({
           ))}
         </div>
 
+        {donorType === 'organization' && (
+          <div className="grid grid-cols-3 gap-2">
+            <button onClick={() => onChange(clamp(count + 50))} className="h-10 bg-purple-light text-purple-accent text-sm font-semibold rounded-xl tabular-nums">+50</button>
+            <button onClick={() => onChange(clamp(count + 100))} className="h-10 bg-purple-light text-purple-accent text-sm font-semibold rounded-xl tabular-nums">+100</button>
+            <button onClick={() => onChange(clamp(count + 250))} className="h-10 bg-purple-light text-purple-accent text-sm font-semibold rounded-xl tabular-nums">+250</button>
+          </div>
+        )}
+
         <div className="flex flex-wrap justify-center gap-1.5 pt-2 border-t border-border-custom">
           {Array.from({ length: visualBoxes }).map((_, i) => (
             <motion.div
@@ -381,13 +496,15 @@ function CountStep({
 }
 
 function ConfirmStep({
-  donorName, count, onAddAnother, onDone,
+  donorName, donorType, count, onAddAnother, onDone,
 }: {
   donorName: string;
+  donorType: DonorType;
   count: number;
   onAddAnother: () => void;
   onDone: () => void;
 }) {
+  const TypeIcon = donorType === 'organization' ? Church : User;
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -407,10 +524,18 @@ function ConfirmStep({
         </motion.div>
         <div>
           <h2 className="text-xl font-bold text-navy mb-1">Logged!</h2>
-          <p className="text-sm text-slate">
-            <span className="font-semibold text-navy">{count}</span> {count === 1 ? 'box' : 'boxes'} from <span className="font-semibold text-navy">{donorName}</span>
+          <p className="text-sm text-slate flex items-center justify-center gap-1.5 flex-wrap">
+            <span className="font-semibold text-navy">{count}</span> {count === 1 ? 'box' : 'boxes'} from
+            <TypeIcon className={`w-4 h-4 inline-block ${donorType === 'organization' ? 'text-purple-accent' : 'text-occ-green'}`} />
+            <span className="font-semibold text-navy">{donorName}</span>
           </p>
         </div>
+        {donorType === 'organization' && count >= 50 && (
+          <div className="text-xs text-purple-accent bg-purple-light px-3 py-2 rounded-xl inline-block">
+            <Building2 className="w-3 h-3 inline-block mr-1 -mt-0.5" />
+            Large organization drop-off logged
+          </div>
+        )}
       </div>
 
       <button
@@ -455,7 +580,7 @@ function StepHeader({
           </button>
         ) : <div />}
       </div>
-      <h2 className="text-xl font-bold text-navy">{title}</h2>
+      {title && <h2 className="text-xl font-bold text-navy">{title}</h2>}
       <div className="flex gap-1.5">
         {Array.from({ length: totalSteps }).map((_, i) => (
           <span

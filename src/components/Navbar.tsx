@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
 import { ROLE_CONFIG } from '@/data/mockData';
 import type { UserRole } from '@/data/mockData';
+import Logo, { Mark } from '@/components/Logo';
 
 interface NavbarProps {
   title: string;
@@ -36,7 +37,7 @@ export default function Navbar({ title }: NavbarProps) {
   return (
     <>
       <header className="sticky top-0 z-50 h-14 bg-bg-card border-b border-border-custom flex items-center px-4 justify-between">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5 min-w-0">
           <button
             onClick={() => setMenuOpen(true)}
             className="touch-target flex items-center justify-center -ml-1"
@@ -44,7 +45,11 @@ export default function Navbar({ title }: NavbarProps) {
           >
             <Menu className="w-6 h-6 text-navy" />
           </button>
-          <h1 className="text-lg font-semibold text-navy leading-tight">{title}</h1>
+          <a href="#/" className="flex items-center" aria-label="OCC Track home">
+            <Mark size={26} />
+          </a>
+          <span className="h-5 w-px bg-border-custom shrink-0" aria-hidden="true" />
+          <h1 className="text-base font-semibold text-navy leading-tight truncate">{title}</h1>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -88,7 +93,7 @@ export default function Navbar({ title }: NavbarProps) {
             >
               <div className="p-4 border-b border-border-custom">
                 <div className="flex items-center justify-between mb-4">
-                  <span className="font-bold text-navy text-lg">OCC Track</span>
+                  <Logo size={32} />
                   <button onClick={() => setMenuOpen(false)} className="touch-target flex items-center justify-center">
                     <X className="w-5 h-5 text-slate" />
                   </button>
