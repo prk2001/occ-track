@@ -3,15 +3,21 @@ import { Link } from 'react-router';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Inbox, Mail, MessageSquare, Bell, ChevronRight, ChevronDown, Search,
-  CheckCircle2, AlertCircle, Lock, ArrowLeft, Filter, Send,
+  CheckCircle2, AlertCircle, Lock, ArrowLeft, Filter, Send, Zap,
 } from 'lucide-react';
 import Layout from '@/components/Layout';
 import { useAuth } from '@/hooks/useAuth';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
-import { OUTBOX_KEY } from '@/lib/outbox';
+import {
+  OUTBOX_KEY,
+  buildReminder,
+  planReminders,
+  sendMessage,
+} from '@/lib/outbox';
 import type { OutboxChannel, OutboxMessage } from '@/lib/outbox';
 import { logAuditEvent } from '@/lib/auditLog';
-import { timeAgo } from '@/data/mockData';
+import { COLLECTION_WEEK_START, timeAgo } from '@/data/mockData';
+import type { StoredSignup } from '@/data/mockData';
 
 /**
  * Notification outbox viewer — Super Admin only.
@@ -29,9 +35,62 @@ import { timeAgo } from '@/data/mockData';
 export default function Outbox() {
   const { user, isSuperAdmin } = useAuth();
   const [messages] = useLocalStorage<OutboxMessage[]>(OUTBOX_KEY, []);
+  const [signups, setSignups] = useLocalStorage<StoredSignup[]>('occ:signups', []);
   const [query, setQuery] = useState('');
   const [channelFilter, setChannelFilter] = useState<OutboxChannel | 'all'>('all');
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [dispatchedCount, setDispatchedCount] = useState<number | null>(null);
+
+  // Dispatch reminder messages that are overdue but haven't been sent.
+  // Idempotent — clicking twice doesn't double-send because we mark each
+  // signup's reminderState on dispatch. In production this would be a cron.
+  function dispatchOverdueReminders() {
+    if (!user) return;
+    // Force-anchor "now" to the morning of Collection Week Day 1 so the
+    // demo shows real reminder dispatches (T-7d, T-1d, day-of all fire).
+    // The actual current date is months away, so the planner would return
+    // an empty list without this override. In production, "now" = `new Date()`.
+    const demoNow = new Date(`${COLLECTION_WEEK_START}T08:00:00Z`);
+    const plans = planReminders({
+      signups,
+      collectionWeekStart: COLLECTION_WEEK_START,
+      now: demoNow,
+    });
+    if (plans.length === 0) {
+      setDispatchedCount(0);
+      setTimeout(() => setDispatchedCount(null), 2500);
+      return;
+    }
+    // Send each planned reminder and stamp the signup's reminderState.
+    const now = new Date().toISOString();
+    plans.forEach((plan) => {
+      sendMessage({
+        ...buildReminder(plan.buildArgs),
+        relatedTarget: `signup:${plan.signupId}`,
+      });
+    });
+    setSignups((prev) =>
+      prev.map((s) => {
+        const planForThis = plans.filter((p) => p.signupId === s.id);
+        if (planForThis.length === 0) return s;
+        const next = { ...s, reminderState: { ...(s.reminderState ?? {}) } };
+        for (const p of planForThis) {
+          if (p.kind === 't7') next.reminderState.t7Sent = now;
+          if (p.kind === 't1') next.reminderState.t1Sent = now;
+          if (p.kind === 'dayOf') next.reminderState.dayOfSent = now;
+        }
+        return next;
+      }),
+    );
+    logAuditEvent(
+      { id: user.id, name: user.name, role: user.role },
+      'email_all',
+      'outbox',
+      `Dispatched ${plans.length} scheduled reminders (T-7/T-1/day-of)`,
+    );
+    setDispatchedCount(plans.length);
+    setTimeout(() => setDispatchedCount(null), 3500);
+  }
 
   // Log when Super Admin opens this page — they're inspecting what got
   // sent to whom, which counts as a privacy-sensitive view.
@@ -134,6 +193,43 @@ export default function Outbox() {
             </p>
           </div>
         </div>
+
+        {/* Dispatch reminders — manual trigger that simulates the T-7/T-1/day-of
+            reminder cron a real backend would run on a schedule. Idempotent. */}
+        {signups.length > 0 && (
+          <div className="bg-bg-card rounded-2xl border border-border-custom p-4 flex items-center justify-between gap-3 flex-wrap">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-ink flex items-center gap-1.5">
+                <Zap className="w-4 h-4 text-gold" />
+                Scheduled reminders
+              </p>
+              <p className="text-[11px] text-ink-light italic mt-0.5">
+                In production, T-7d / T-1d / day-of reminders dispatch automatically.
+                Click below to simulate the cron run for {signups.length} {signups.length === 1 ? 'signup' : 'signups'}.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              {dispatchedCount !== null && (
+                <span className={`text-[11px] font-bold uppercase tracking-wider px-2 py-1 rounded-full ${
+                  dispatchedCount === 0
+                    ? 'bg-blue-light text-blue-accent'
+                    : 'bg-occ-green-light text-occ-green'
+                }`}>
+                  {dispatchedCount === 0
+                    ? 'Nothing overdue'
+                    : `${dispatchedCount} sent`}
+                </span>
+              )}
+              <button
+                onClick={dispatchOverdueReminders}
+                className="h-10 px-4 bg-gold hover:bg-gold-dark text-white text-xs font-bold rounded-xl flex items-center gap-1.5 uppercase tracking-wider transition-colors shrink-0"
+              >
+                <Zap className="w-3.5 h-3.5" />
+                Run dispatcher
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Channel breakdown */}
         <div className="grid grid-cols-3 gap-3">

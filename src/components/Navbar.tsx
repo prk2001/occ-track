@@ -1,10 +1,18 @@
-import { useState } from 'react';
-import { Menu, Bell, X, LogOut, Settings, User, ChevronRight } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router';
+import { Menu, Bell, X, LogOut, Settings, User, ChevronRight, BellRing, Inbox } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
-import { ROLE_CONFIG } from '@/data/mockData';
+import { ROLE_CONFIG, timeAgo } from '@/data/mockData';
 import type { UserRole } from '@/data/mockData';
 import Logo, { Mark } from '@/components/Logo';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
+import {
+  inboxForRecipient,
+  markAllReadForRecipient,
+  OUTBOX_KEY,
+} from '@/lib/outbox';
+import type { OutboxMessage } from '@/lib/outbox';
 
 interface NavbarProps {
   title: string;
@@ -18,7 +26,24 @@ export default function Navbar({ title }: NavbarProps) {
   const [notifOpen, setNotifOpen] = useState(false);
 
   const roleConfig = user ? ROLE_CONFIG[user.role] : null;
-  const unreadCount = 3;
+
+  // Live in-app notifications — sourced from the outbox, filtered to
+  // messages addressed to the current user. Updates immediately when
+  // a signup or self-edit dispatches a new message.
+  const [allMessages] = useLocalStorage<OutboxMessage[]>(OUTBOX_KEY, []);
+  const inbox = useMemo(
+    () => (user ? inboxForRecipient(allMessages, user.id) : []),
+    [allMessages, user],
+  );
+  const unreadCount = inbox.filter((m) => !m.readAt).length;
+
+  // When the drawer opens, mark all of this user's notifications as read.
+  // Stays in localStorage so the badge stays cleared across reloads.
+  useEffect(() => {
+    if (notifOpen && user) {
+      markAllReadForRecipient(user.id);
+    }
+  }, [notifOpen, user]);
 
   const navItems = [
     { label: 'Dashboard', path: '/', icon: 'home' },
@@ -210,24 +235,23 @@ export default function Navbar({ title }: NavbarProps) {
                 </button>
               </div>
               <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                <NotificationItem
-                  type="warning"
-                  title="Living Word Church"
-                  message="Hasn't reported in 24+ hours"
-                  time="2h ago"
-                />
-                <NotificationItem
-                  type="success"
-                  title="Midwest Milestone"
-                  message="Region hit 500,000 shoeboxes!"
-                  time="3h ago"
-                />
-                <NotificationItem
-                  type="info"
-                  title="Collection Week Reminder"
-                  message="Next scheduled check-in at 3:00 PM"
-                  time="5h ago"
-                />
+                {inbox.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Inbox className="w-10 h-10 text-slate-light mx-auto mb-3" />
+                    <p className="font-display text-base text-navy">All caught up.</p>
+                    <p className="text-xs text-slate italic mt-1 max-w-[200px] mx-auto">
+                      When a volunteer signs up or updates their info, you&apos;ll see it here.
+                    </p>
+                  </div>
+                ) : (
+                  inbox.map((msg) => (
+                    <LiveNotificationItem
+                      key={msg.id}
+                      message={msg}
+                      onClick={() => setNotifOpen(false)}
+                    />
+                  ))
+                )}
               </div>
             </motion.div>
           </>
@@ -237,6 +261,48 @@ export default function Navbar({ title }: NavbarProps) {
   );
 }
 
+// Live notification row — backed by an OutboxMessage. Tap to navigate
+// to the related entity (e.g. /signups for new volunteer signups).
+function LiveNotificationItem({
+  message, onClick,
+}: {
+  message: OutboxMessage;
+  onClick: () => void;
+}) {
+  const unread = !message.readAt;
+  const subjectTone = (() => {
+    switch (message.kind) {
+      case 'signup_confirmation': return { bg: 'bg-occ-green-light', dot: 'bg-occ-green', accent: 'text-occ-green' };
+      case 'arrival_confirmation': return { bg: 'bg-blue-light', dot: 'bg-blue-accent', accent: 'text-blue-accent' };
+      case 'leadership_broadcast': return { bg: 'bg-purple-light', dot: 'bg-purple-accent', accent: 'text-purple-accent' };
+      case 'reminder': return { bg: 'bg-gold-light', dot: 'bg-gold', accent: 'text-gold' };
+    }
+  })();
+  return (
+    <Link
+      to={message.link ?? '/'}
+      onClick={onClick}
+      className={`flex gap-3 p-3 rounded-xl transition-colors ${
+        unread ? subjectTone.bg : 'bg-bg-primary'
+      } hover:bg-bg-card`}
+    >
+      <span className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${unread ? subjectTone.dot : 'bg-slate-light/40'}`} />
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1.5">
+          {unread && <BellRing className={`w-3 h-3 ${subjectTone.accent}`} />}
+          <p className="text-sm font-semibold text-navy truncate">
+            {message.subject ?? message.toName ?? 'Notification'}
+          </p>
+        </div>
+        <p className="text-xs text-slate mt-0.5 line-clamp-2 leading-relaxed">{message.body}</p>
+        <p className="text-[10px] text-slate-light mt-1 tabular-nums">{timeAgo(message.sentAt)}</p>
+      </div>
+    </Link>
+  );
+}
+
+// Deprecated — kept for any external import that hasn't migrated.
+// New code should use LiveNotificationItem with a backing OutboxMessage.
 function NotificationItem({ type, title, message, time }: { type: string; title: string; message: string; time: string }) {
   const colors: Record<string, { bg: string; icon: string }> = {
     success: { bg: 'bg-occ-green-light', icon: 'text-occ-green' },

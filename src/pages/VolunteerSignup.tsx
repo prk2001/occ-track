@@ -21,7 +21,7 @@ import {
 import { defaultTokenExpiry } from '@/data/mockData';
 import type { DayBlock, ShirtSize, StoredSignup } from '@/data/mockData';
 import { logAuditEvent } from '@/lib/auditLog';
-import { buildSignupConfirmation, sendMessage } from '@/lib/outbox';
+import { buildCdoSignupAlert, buildSignupConfirmation, sendMessage } from '@/lib/outbox';
 
 // Note on roles: in real OCC practice, volunteers sign up just to *serve* —
 // the Central Drop-off Leader assigns specific roles (Greeter, Counter,
@@ -121,6 +121,23 @@ export default function VolunteerSignup() {
       // Cross-link the outbox message into the audit trail so leadership
       // can see "we attempted to send the magic link" alongside the signup.
       msg.relatedTarget = `signup:${id}`;
+      // In-app notifications: the CDO Leader hosting this location and the
+      // Regional Admin overseeing this region both get a navbar ping so
+      // they're aware of new signups without having to refresh /signups.
+      // Hard-coded to u3 (Maria, CDO Leader at cdo1) and u2 (David Chen,
+      // Regional Admin Southeast) until per-CDO scoping ships.
+      sendMessage(buildCdoSignupAlert({
+        cdoUserId: 'u3',
+        cdoUserName: 'Maria Rodriguez',
+        volunteerName: stored.name,
+        signupId: id,
+      }));
+      sendMessage(buildCdoSignupAlert({
+        cdoUserId: 'u2',
+        cdoUserName: 'David Chen',
+        volunteerName: stored.name,
+        signupId: id,
+      }));
     }
   }
 

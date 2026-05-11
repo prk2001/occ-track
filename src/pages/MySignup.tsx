@@ -9,6 +9,7 @@ import Layout from '@/components/Layout';
 import Logo from '@/components/Logo';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { logAuditEvent } from '@/lib/auditLog';
+import { buildSelfEditAlert, sendMessage } from '@/lib/outbox';
 import type { ShirtSize, StoredSignup } from '@/data/mockData';
 import {
   defaultTokenExpiry,
@@ -130,6 +131,27 @@ export default function MySignup() {
         ? `Updated fields: ${changes.join(', ')}`
         : 'Saved (no changes)',
     );
+
+    // In-app notifications: when there were actual field changes, ping
+    // CDO Leader + Regional Admin so they know the roster has updated info.
+    // Skipped for no-op saves (e.g. user opened the page and clicked save
+    // without changing anything).
+    if (changes.length > 0) {
+      sendMessage(buildSelfEditAlert({
+        recipientUserId: 'u3',
+        recipientName: 'Maria Rodriguez',
+        volunteerName: signup.name,
+        signupId: signup.id,
+        changedFields: changes,
+      }));
+      sendMessage(buildSelfEditAlert({
+        recipientUserId: 'u2',
+        recipientName: 'David Chen',
+        volunteerName: signup.name,
+        signupId: signup.id,
+        changedFields: changes,
+      }));
+    }
 
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);

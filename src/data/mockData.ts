@@ -201,6 +201,14 @@ export interface StoredSignup {
   // the signup via the self-service magic link or the admin page.
   lastEditedAt?: string;
   lastEditedBy?: 'self' | 'admin';
+  // reminderState: which scheduled reminders the dispatcher has already
+  // queued for this volunteer. Used as an idempotency key so re-running
+  // the dispatcher doesn't double-send.
+  reminderState?: {
+    t7Sent?: string;     // ISO timestamp of when the T-7 days reminder fired
+    t1Sent?: string;     // ISO timestamp of when the T-1 day reminder fired
+    dayOfSent?: string;  // ISO timestamp of when the day-of reminder fired
+  };
 }
 
 // ── Magic link token expiry helpers ───────────────────────────────────────
