@@ -19,6 +19,7 @@ import {
 } from '@/data/mockData';
 import type { DayBlock, StoredSignup } from '@/data/mockData';
 import { logAuditEvent } from '@/lib/auditLog';
+import { buildArrivalConfirmation, sendMessage } from '@/lib/outbox';
 
 // Seed: Saturday is often covered by a youth group. Demos the blocked
 // state on first load; user can clear via Reopen.
@@ -175,6 +176,16 @@ export default function Signups() {
     );
     if (target) {
       logAuditEvent(actor, 'mark_arrived', `signup:${id}`, `Marked ${target.name} as arrived at the welcome table`);
+      // Mock SMS: real deploy would push this to Telnyx so the volunteer
+      // gets a "welcome, find a team lead in a red shirt" text on arrival.
+      sendMessage({
+        ...buildArrivalConfirmation({
+          name: target.name,
+          phone: target.phone,
+          locationName: cdoLabel,
+        }),
+        relatedTarget: `signup:${id}`,
+      });
     }
   }
 

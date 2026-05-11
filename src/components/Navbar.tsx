@@ -36,7 +36,12 @@ export default function Navbar({ title }: NavbarProps) {
     ...(isRegionalAdmin ? [{ label: 'Signups & Schedule', path: '/signups', icon: 'signups' }] : []),
     // Audit log: who saw what + when. National HQ only — this is the
     // "watch the watchers" view that proves data governance is real.
-    ...(isSuperAdmin ? [{ label: 'Audit Log', path: '/audit-log', icon: 'audit' }] : []),
+    ...(isSuperAdmin
+      ? [
+          { label: 'Audit Log', path: '/audit-log', icon: 'audit' },
+          { label: 'Outbox', path: '/outbox', icon: 'outbox' },
+        ]
+      : []),
     { label: 'Settings', path: '/settings', icon: 'settings' },
   ];
 

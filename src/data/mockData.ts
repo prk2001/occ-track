@@ -190,6 +190,10 @@ export interface StoredSignup {
   // grants edit rights on this single signup. Generated at submit time and
   // never displayed back to leadership — only to the volunteer themselves.
   editToken?: string;
+  // editTokenExpiresAt: ISO timestamp after which the magic link stops working.
+  // Default: 90 days post-Collection Week. Auto-extended when volunteer edits
+  // within the last 14 days (sliding-window pattern).
+  editTokenExpiresAt?: string;
   // arrivedAt: set by a Greeter at the welcome table on Day 1 when the
   // volunteer physically shows up. Powers the day-of attendance roster.
   arrivedAt?: string;
@@ -197,6 +201,35 @@ export interface StoredSignup {
   // the signup via the self-service magic link or the admin page.
   lastEditedAt?: string;
   lastEditedBy?: 'self' | 'admin';
+}
+
+// ── Magic link token expiry helpers ───────────────────────────────────────
+// 90 days post-Collection Week is the default lifetime: long enough for
+// post-event follow-up, short enough that abandoned tokens don't pile up.
+export const TOKEN_LIFETIME_DAYS = 90;
+export const TOKEN_EXTEND_THRESHOLD_DAYS = 14; // auto-extend if <14 days left
+
+export function defaultTokenExpiry(fromISO?: string): string {
+  // Anchor to max(now, end-of-Collection-Week) so a signup made BEFORE the
+  // event still gets at least 90 days post-event. Anchoring purely to "now"
+  // would shortchange early signups.
+  const now = fromISO ? new Date(fromISO).getTime() : Date.now();
+  const eventEnd = new Date(`${COLLECTION_WEEK_END}T23:59:59Z`).getTime();
+  const anchor = Math.max(now, eventEnd);
+  return new Date(anchor + TOKEN_LIFETIME_DAYS * 24 * 60 * 60 * 1000).toISOString();
+}
+
+export function tokenStatus(expiresAt: string | undefined): {
+  state: 'valid' | 'expiring' | 'expired';
+  daysLeft: number;
+} {
+  if (!expiresAt) return { state: 'valid', daysLeft: TOKEN_LIFETIME_DAYS };
+  const now = Date.now();
+  const exp = new Date(expiresAt).getTime();
+  const daysLeft = Math.ceil((exp - now) / (24 * 60 * 60 * 1000));
+  if (daysLeft <= 0) return { state: 'expired', daysLeft: 0 };
+  if (daysLeft <= TOKEN_EXTEND_THRESHOLD_DAYS) return { state: 'expiring', daysLeft };
+  return { state: 'valid', daysLeft };
 }
 
 // ──────────────────────────────────────────────────────────────────────────────

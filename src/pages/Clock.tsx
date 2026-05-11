@@ -18,6 +18,7 @@ import {
 } from '@/data/mockData';
 import type { StoredSignup, Volunteer } from '@/data/mockData';
 import { logAuditEvent } from '@/lib/auditLog';
+import { buildArrivalConfirmation, sendMessage } from '@/lib/outbox';
 
 type Step = 'location' | 'volunteer' | 'action' | 'done';
 type Action = 'in' | 'out';
@@ -68,6 +69,14 @@ export default function Clock() {
         `signup:${signupId}`,
         `Self-checked in at welcome table kiosk`,
       );
+      sendMessage({
+        ...buildArrivalConfirmation({
+          name: target.name,
+          phone: target.phone,
+          locationName: location?.name ?? 'the welcome table',
+        }),
+        relatedTarget: `signup:${signupId}`,
+      });
     }
   }
 

@@ -18,8 +18,10 @@ import {
   COLLECTION_WEEK_START,
   COLLECTION_WEEK_END,
 } from '@/data/mockData';
+import { defaultTokenExpiry } from '@/data/mockData';
 import type { DayBlock, ShirtSize, StoredSignup } from '@/data/mockData';
 import { logAuditEvent } from '@/lib/auditLog';
+import { buildSignupConfirmation, sendMessage } from '@/lib/outbox';
 
 // Note on roles: in real OCC practice, volunteers sign up just to *serve* —
 // the Central Drop-off Leader assigns specific roles (Greeter, Counter,
@@ -83,11 +85,13 @@ export default function VolunteerSignup() {
       typeof crypto !== 'undefined' && crypto.randomUUID
         ? crypto.randomUUID()
         : `tok_${Date.now()}_${Math.random().toString(36).slice(2, 12)}`;
+    const submittedAt = new Date().toISOString();
     const stored: StoredSignup = {
       ...draft,
       id,
-      submittedAt: new Date().toISOString(),
+      submittedAt,
       editToken,
+      editTokenExpiresAt: defaultTokenExpiry(submittedAt),
     };
     setSignups((prev) => [stored, ...prev]);
     setSubmittedId(id);
@@ -100,6 +104,24 @@ export default function VolunteerSignup() {
       `signup:${id}`,
       `New signup from ${stored.email}`,
     );
+    // Mock outbox: in production this is where Telnyx/Resend would actually
+    // dispatch the email and SMS. The /outbox viewer (Super Admin) shows
+    // what *would have been sent* if the wire was hooked up.
+    if (typeof window !== 'undefined') {
+      const origin = window.location.origin + window.location.pathname.replace(/\/$/, '');
+      const magicLinkUrl = `${origin}#/my-signup?token=${editToken}`;
+      const msg = sendMessage(
+        buildSignupConfirmation({
+          name: stored.name,
+          email: stored.email,
+          magicLinkUrl,
+          channel: 'email',
+        }),
+      );
+      // Cross-link the outbox message into the audit trail so leadership
+      // can see "we attempted to send the magic link" alongside the signup.
+      msg.relatedTarget = `signup:${id}`;
+    }
   }
 
   // Step gating
@@ -535,7 +557,7 @@ function DoneStep({ signup, onAnother }: { signup?: StoredSignup; onAnother: () 
         <SummaryLine label="Shirt" value={signup?.shirtSize || '—'} />
       </div>
 
-      {signup?.editToken && <MagicLinkCard token={signup.editToken} />}
+      {signup?.editToken && <MagicLinkCard token={signup.editToken} email={signup.email} />}
 
       <p className="text-sm text-ink-light italic">
         Until then, share with a friend: <span className="text-sp-red font-semibold">samaritanspurse.org/occ</span>
@@ -556,9 +578,9 @@ function DoneStep({ signup, onAnother }: { signup?: StoredSignup; onAnother: () 
 // ─── Magic link card ─────────────────────────────────────────────────────
 // Shows the volunteer their personal edit URL with copy-to-clipboard.
 // Possession of this URL = edit rights on the signup, no password needed.
-// Real production deploy would also email/SMS this link so it isn't lost
-// if the user closes the tab before saving it.
-function MagicLinkCard({ token }: { token: string }) {
+// The same link is also dispatched via the outbox (mocked) so the volunteer
+// has it in their inbox if they close this tab.
+function MagicLinkCard({ token, email }: { token: string; email: string }) {
   const [copied, setCopied] = useState(false);
   // Build the URL from window.location.origin so it works regardless of
   // where the app is hosted (GitHub Pages, Netlify, localhost, etc.).
@@ -588,9 +610,10 @@ function MagicLinkCard({ token }: { token: string }) {
         </p>
       </div>
       <p className="text-xs text-ink leading-relaxed">
-        Bookmark this — it&apos;s your way back in. Update your phone, shirt size,
-        or notes anytime. <strong>Don&apos;t share it</strong>; anyone with the link
-        can edit your signup.
+        We also emailed this to <strong>{email}</strong> — check your inbox in a few
+        minutes. Bookmark this link as a backup; update your phone, shirt size, or
+        notes anytime. <strong>Don&apos;t share it</strong> — anyone with the link can
+        edit your signup.
       </p>
       <div className="flex gap-2">
         <input

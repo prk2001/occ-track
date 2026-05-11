@@ -3,14 +3,19 @@ import { Link, useSearchParams } from 'react-router';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ShieldCheck, User, Phone, Mail, MapPin, Shield, Shirt, MessageCircle,
-  CheckCircle2, AlertCircle, Save, LogOut, Sparkles,
+  CheckCircle2, AlertCircle, Save, LogOut, Sparkles, Clock as ClockIcon, RefreshCw,
 } from 'lucide-react';
 import Layout from '@/components/Layout';
 import Logo from '@/components/Logo';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { logAuditEvent } from '@/lib/auditLog';
 import type { ShirtSize, StoredSignup } from '@/data/mockData';
-import { timeAgo } from '@/data/mockData';
+import {
+  defaultTokenExpiry,
+  timeAgo,
+  tokenStatus,
+  TOKEN_EXTEND_THRESHOLD_DAYS,
+} from '@/data/mockData';
 
 /**
  * Volunteer self-service edit page.
@@ -65,6 +70,11 @@ export default function MySignup() {
   if (!signup || !draft) {
     return <InvalidLinkPage reason="not-found" />;
   }
+  // Token matched but the timestamp says it's past its lifetime.
+  const expiry = tokenStatus(signup.editTokenExpiresAt);
+  if (expiry.state === 'expired') {
+    return <InvalidLinkPage reason="expired" />;
+  }
 
   function patch(p: Partial<NonNullable<typeof draft>>) {
     setDraft((d) => (d ? { ...d, ...p } : d));
@@ -74,6 +84,11 @@ export default function MySignup() {
     if (!draft || !signup) return;
     const now = new Date().toISOString();
     const before = signup;
+    // Sliding-window expiry: if the token is in the "expiring soon"
+    // window when the volunteer comes back, push the expiry out another
+    // full lifetime. Active users stay in; ghosts age out.
+    const shouldExtend = expiry.state === 'expiring';
+    const nextExpiry = shouldExtend ? defaultTokenExpiry(now) : signup.editTokenExpiresAt;
     setSignups((prev) =>
       prev.map((s) =>
         s.id === signup.id
@@ -89,6 +104,7 @@ export default function MySignup() {
               notes: draft.notes.trim(),
               lastEditedAt: now,
               lastEditedBy: 'self',
+              editTokenExpiresAt: nextExpiry,
             }
           : s,
       ),
@@ -188,6 +204,25 @@ export default function MySignup() {
               </motion.div>
             )}
           </AnimatePresence>
+
+          {/* Expiring-soon warning. Only shown when the token is inside the
+              extend-threshold window. Saving auto-extends the link, so we
+              steer the user toward the Save button. */}
+          {expiry.state === 'expiring' && (
+            <div className="bg-gold-light border border-gold rounded-xl px-4 py-3 mb-4 flex items-start gap-2.5">
+              <ClockIcon className="w-5 h-5 text-gold shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-ink font-semibold">
+                  Your edit link expires in {expiry.daysLeft} {expiry.daysLeft === 1 ? 'day' : 'days'}.
+                </p>
+                <p className="text-xs text-ink-light italic mt-0.5">
+                  Save any change below to extend it another {TOKEN_EXTEND_THRESHOLD_DAYS}+ days.
+                  After that you&apos;d need to ask your CDO Leader for a fresh link.
+                </p>
+              </div>
+              <RefreshCw className="w-4 h-4 text-gold/60 shrink-0 mt-0.5" />
+            </div>
+          )}
 
           {/* Edit form */}
           <div className="bg-bg-card rounded-2xl shadow-card border border-border-custom p-5 space-y-4">
@@ -301,7 +336,25 @@ export default function MySignup() {
 }
 
 // ─── Invalid link page ────────────────────────────────────────────────────
-function InvalidLinkPage({ reason }: { reason: 'no-token' | 'not-found' }) {
+function InvalidLinkPage({ reason }: { reason: 'no-token' | 'not-found' | 'expired' }) {
+  const headline = {
+    'no-token': 'Link missing.',
+    'not-found': 'Link expired.',
+    'expired': 'Link expired.',
+  }[reason];
+  const subhead = {
+    'no-token': "We can't find your signup.",
+    'not-found': 'Or your signup was removed.',
+    'expired': 'Time to get a fresh one.',
+  }[reason];
+  const body = {
+    'no-token':
+      'This page only works through your personal edit link. Check the link in the email or message you received after you signed up.',
+    'not-found':
+      'The link you used no longer matches an active signup. If you think this is a mistake, contact your Central Drop-off Leader.',
+    'expired':
+      'For security, edit links expire 90 days after Collection Week ends. Your Central Drop-off Leader can issue you a fresh link — or you can sign up again if your info needs a full refresh.',
+  }[reason];
   return (
     <Layout hideNav>
       <div className="relative min-h-[100dvh]">
@@ -311,19 +364,17 @@ function InvalidLinkPage({ reason }: { reason: 'no-token' | 'not-found' }) {
         <div className="relative px-5 pt-12 pb-12 max-w-md mx-auto text-center">
           <Logo size={32} className="mx-auto mb-8" />
           <div className="w-16 h-16 mx-auto bg-sp-red-light rounded-full flex items-center justify-center mb-4">
-            <AlertCircle className="w-8 h-8 text-sp-red" />
+            {reason === 'expired' ? (
+              <ClockIcon className="w-8 h-8 text-sp-red" />
+            ) : (
+              <AlertCircle className="w-8 h-8 text-sp-red" />
+            )}
           </div>
           <h1 className="font-display text-3xl text-ink leading-[1.1] tracking-tight">
-            {reason === 'no-token' ? 'Link missing.' : 'Link expired.'}
-            <span className="font-display-italic block text-sp-red mt-1">
-              {reason === 'no-token' ? "We can't find your signup." : 'Or your signup was removed.'}
-            </span>
+            {headline}
+            <span className="font-display-italic block text-sp-red mt-1">{subhead}</span>
           </h1>
-          <p className="text-sm text-ink-light mt-4 italic leading-relaxed">
-            {reason === 'no-token'
-              ? 'This page only works through your personal edit link. Check the link in the email or message you received after you signed up.'
-              : 'The link you used no longer matches an active signup. If you think this is a mistake, contact your Central Drop-off Leader.'}
-          </p>
+          <p className="text-sm text-ink-light mt-4 italic leading-relaxed">{body}</p>
           <Link
             to="/signup"
             className="inline-flex h-12 px-5 mt-6 bg-sp-red text-white text-sm font-semibold rounded-xl items-center justify-center hover:bg-sp-red-dark transition-colors gap-1.5"

@@ -15,6 +15,7 @@ import VolunteerSignup from '@/pages/VolunteerSignup';
 import Signups from '@/pages/Signups';
 import MySignup from '@/pages/MySignup';
 import AuditLog from '@/pages/AuditLog';
+import Outbox from '@/pages/Outbox';
 import States from '@/pages/States';
 import Settings from '@/pages/Settings';
 import NotFound from '@/pages/NotFound';
@@ -38,6 +39,7 @@ export default function App() {
         <Route path="/signups" element={<Signups />} />
         <Route path="/my-signup" element={<MySignup />} />
         <Route path="/audit-log" element={<AuditLog />} />
+        <Route path="/outbox" element={<Outbox />} />
         <Route path="/states" element={<States />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="*" element={<NotFound />} />

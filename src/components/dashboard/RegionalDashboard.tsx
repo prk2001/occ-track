@@ -1,6 +1,7 @@
 import { Gift, Warehouse, BarChart3, MapPin, AlertTriangle, ChevronRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { LOCATIONS, REGION_DATA, formatCount, getShoeboxesForLocation } from '@/data/mockData';
+import WelcomeTableWidget from '@/components/dashboard/WelcomeTableWidget';
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.08 } } };
 const item = { hidden: { opacity: 0, x: 20 }, show: { opacity: 1, x: 0, transition: { duration: 0.3, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] } } };
@@ -27,6 +28,8 @@ export default function RegionalDashboard() {
           </motion.div>
         ))}
       </motion.div>
+
+      <WelcomeTableWidget />
 
       {/* Alerts */}
       {region.cdoCount - region.cdoActive > 0 && (
