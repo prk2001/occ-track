@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { useNoIndex } from '@/hooks/useNoIndex';
+import { useTranslation } from '@/lib/i18n';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ShieldCheck, User, Phone, Mail, MapPin, Shield, Shirt, MessageCircle,
@@ -46,6 +47,7 @@ import {
  */
 export default function MySignup() {
   useNoIndex();
+  const { t } = useTranslation();
   const [params] = useSearchParams();
   const token = params.get('token') ?? '';
   const [signups, setSignups] = useLocalStorage<StoredSignup[]>('occ:signups', []);
@@ -229,16 +231,16 @@ export default function MySignup() {
           <div className="space-y-2 mb-6">
             <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-occ-green flex items-center gap-1.5">
               <ShieldCheck className="w-3 h-3" />
-              Volunteer Self-Service
+              {t('mysignup.kicker')}
             </p>
             <h1 className="font-display text-3xl sm:text-4xl text-ink leading-[1.05] tracking-tight">
-              Welcome back{signup.name ? `, ${signup.name.split(' ')[0]}` : ''}.
+              {t('mysignup.welcome', { name: signup.name ? `, ${signup.name.split(' ')[0]}` : '' })}
               <span className="font-display-italic block text-occ-green mt-1">
-                Your signup details.
+                {t('mysignup.subtitle')}
               </span>
             </h1>
             <p className="text-sm text-ink-light italic">
-              Update anything that&apos;s changed. You signed up {timeAgo(signup.submittedAt)}
+              {t('mysignup.body')} {timeAgo(signup.submittedAt)}
               {signup.lastEditedAt && signup.lastEditedAt !== signup.submittedAt
                 ? ` · last updated ${timeAgo(signup.lastEditedAt)}`
                 : ''}.
@@ -256,7 +258,7 @@ export default function MySignup() {
               >
                 <CheckCircle2 className="w-5 h-5 text-occ-green shrink-0" />
                 <p className="text-sm text-occ-green-dark font-semibold">
-                  Saved. Your team lead will see the latest info.
+                  {t('mysignup.saved')}
                 </p>
               </motion.div>
             )}
@@ -400,12 +402,11 @@ export default function MySignup() {
             }`}
           >
             <Save className="w-5 h-5" />
-            {dirty ? 'Save changes' : 'Nothing to save'}
+            {dirty ? t('mysignup.save') : t('mysignup.nothingToSave')}
           </button>
 
           <p className="text-[11px] text-ink-light italic text-center mt-3 max-w-sm mx-auto">
-            Your edits go straight to your Central Drop-off Leader. They&apos;ll see
-            the most current info when they plan the week.
+            {t('mysignup.disclaimer')}
           </p>
         </div>
       </div>
@@ -418,7 +419,13 @@ export default function MySignup() {
 // Friendly tone (we don't want to scare off a legitimate confused user)
 // but firm — no retry button, no refresh shortcut. They wait it out.
 function LockoutPage({ secondsRemaining }: { secondsRemaining: number }) {
+  const { t, locale } = useTranslation();
   const minutes = Math.ceil(secondsRemaining / 60);
+  // Localized pluralization. Our minimal i18n doesn't have plural rules,
+  // so we resolve the word here based on locale.
+  const minutesWord = locale === 'es'
+    ? (minutes === 1 ? 'minuto' : 'minutos')
+    : (minutes === 1 ? 'minute' : 'minutes');
   return (
     <Layout hideNav>
       <div className="relative min-h-[100dvh]">
@@ -431,20 +438,16 @@ function LockoutPage({ secondsRemaining }: { secondsRemaining: number }) {
             <ClockIcon className="w-8 h-8 text-sp-red" />
           </div>
           <h1 className="font-display text-3xl text-ink leading-[1.1] tracking-tight">
-            Slow down.
+            {t('lockout.title')}
             <span className="font-display-italic block text-sp-red mt-1">
-              Too many attempts.
+              {t('lockout.subtitle')}
             </span>
           </h1>
           <p className="text-sm text-ink-light mt-4 italic leading-relaxed">
-            We&apos;ve paused this browser for {minutes} {minutes === 1 ? 'minute' : 'minutes'}{' '}
-            to protect everyone&apos;s signup info. If you&apos;re trying to edit
-            your own signup, find your magic link in the email we sent you
-            after signing up — and come back then.
+            {t('lockout.body', { minutes, minutesWord })}
           </p>
           <p className="text-xs text-ink-light/60 italic mt-6 leading-relaxed">
-            If you think this is a mistake, contact your Central Drop-off
-            Leader — they can issue a fresh link.
+            {t('lockout.contact')}
           </p>
         </div>
       </div>

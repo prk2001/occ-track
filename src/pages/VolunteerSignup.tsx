@@ -470,48 +470,49 @@ function ContactStep({
   onNext: () => void;
   ok: boolean;
 }) {
+  const { t } = useTranslation();
   return (
-    <StepShell title="First, the basics." italic="Just so we can reach you." onBack={onBack}>
+    <StepShell title={t('signup.contact.title')} italic={t('signup.contact.italic')} onBack={onBack}>
       <div className="bg-bg-card rounded-2xl shadow-card border border-border-custom p-5 space-y-4">
         <Field
-          label="Your name"
+          label={t('signup.contact.nameLabel')}
           icon={<User className="w-4 h-4" />}
           value={draft.name}
           onChange={(v) => onPatch({ name: v })}
-          placeholder="First and last"
+          placeholder={t('signup.contact.namePlaceholder')}
           autoFocus
         />
         <Field
-          label="Email"
+          label={t('signup.contact.emailLabel')}
           icon={<Mail className="w-4 h-4" />}
           value={draft.email}
           onChange={(v) => onPatch({ email: v })}
-          placeholder="you@email.com"
+          placeholder={t('signup.contact.emailPlaceholder')}
           type="email"
         />
         <Field
-          label="Phone"
+          label={t('signup.contact.phoneLabel')}
           icon={<Phone className="w-4 h-4" />}
           value={draft.phone}
           onChange={(v) => onPatch({ phone: v })}
-          placeholder="(404) 555-0101"
+          placeholder={t('signup.contact.phonePlaceholder')}
           type="tel"
         />
         <Field
-          label="Your ZIP code (optional)"
+          label={t('signup.contact.zipLabel')}
           icon={<MapPin className="w-4 h-4" />}
           value={draft.zip}
           onChange={(v) => onPatch({ zip: v.replace(/[^\d]/g, '').slice(0, 5) })}
-          placeholder="30301"
+          placeholder={t('signup.contact.zipPlaceholder')}
           mono
         />
       </div>
 
       <p className="text-[11px] text-ink-light italic px-1">
-        We only use this to coordinate the week. No marketing, no sharing — we promise.
+        {t('signup.contact.privacy')}
       </p>
 
-      <PrimaryNext label="Continue" onClick={onNext} disabled={!ok} />
+      <PrimaryNext label={t('signup.contact.next')} onClick={onNext} disabled={!ok} />
     </StepShell>
   );
 }
@@ -533,11 +534,12 @@ function DetailsStep({
   captchaToken: string | null;
   onCaptchaVerified: (token: string) => void;
 }) {
+  const { t } = useTranslation();
   return (
-    <StepShell title="Almost done." italic="A few quick details to plan the week." onBack={onBack}>
+    <StepShell title={t('signup.details.title')} italic={t('signup.details.italic')} onBack={onBack}>
       <div className="bg-bg-card rounded-2xl shadow-card border border-border-custom p-5 space-y-5">
         <div>
-          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-ink-light mb-2">First time volunteering with OCC?</p>
+          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-ink-light mb-2">{t('signup.details.firstTime')}</p>
           <div className="grid grid-cols-2 gap-2 p-1 bg-bg-primary rounded-xl">
             <button
               onClick={() => onPatch({ firstTime: true })}
@@ -545,7 +547,7 @@ function DetailsStep({
                 draft.firstTime === true ? 'bg-bg-card shadow-card text-ink' : 'text-ink-light'
               }`}
             >
-              Yes, first time
+              {t('signup.details.firstTime.yes')}
             </button>
             <button
               onClick={() => onPatch({ firstTime: false })}
@@ -553,14 +555,14 @@ function DetailsStep({
                 draft.firstTime === false ? 'bg-bg-card shadow-card text-ink' : 'text-ink-light'
               }`}
             >
-              I&apos;m a returner
+              {t('signup.details.firstTime.no')}
             </button>
           </div>
         </div>
 
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-ink-light mb-2 flex items-center gap-1.5">
-            <Shirt className="w-3 h-3" /> T-shirt size
+            <Shirt className="w-3 h-3" /> {t('signup.details.shirt')}
           </p>
           <div className="grid grid-cols-5 gap-1.5">
             {(['S', 'M', 'L', 'XL', 'XXL'] as ShirtSize[]).map((sz) => (
@@ -581,32 +583,32 @@ function DetailsStep({
 
         <div className="space-y-3">
           <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-ink-light flex items-center gap-1.5">
-            <Shield className="w-3 h-3" /> Emergency contact
+            <Shield className="w-3 h-3" /> {t('signup.details.emergency.title')}
           </p>
           <Field
-            label="Name"
+            label={t('signup.details.emergency.name')}
             value={draft.emergencyName}
             onChange={(v) => onPatch({ emergencyName: v })}
-            placeholder="Someone we can reach in an emergency"
+            placeholder={t('signup.details.emergencyHelp')}
           />
           <Field
-            label="Phone"
+            label={t('signup.details.emergency.phone')}
             type="tel"
             value={draft.emergencyPhone}
             onChange={(v) => onPatch({ emergencyPhone: v })}
-            placeholder="(404) 555-0101"
+            placeholder={t('signup.contact.phonePlaceholder')}
           />
         </div>
 
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-ink-light mb-1.5 flex items-center gap-1.5">
-            <MessageCircle className="w-3 h-3" /> Anything else? (optional)
+            <MessageCircle className="w-3 h-3" /> {t('signup.details.notes.title')}
           </p>
           <textarea
             value={draft.notes}
             onChange={(e) => onPatch({ notes: e.target.value })}
             rows={3}
-            placeholder="Bringing my kids · I have a van for transport · I'm available for setup the day before · ..."
+            placeholder={t('signup.details.notesHelp')}
             className="w-full px-4 py-3 bg-bg-primary border border-border-custom rounded-xl text-sm text-ink placeholder:text-ink-light/60 focus:outline-none focus:border-sp-red transition-colors resize-none"
           />
         </div>
@@ -648,9 +650,7 @@ function DetailsStep({
           className="mt-0.5 w-5 h-5 accent-sp-red shrink-0"
         />
         <span className="text-xs text-ink leading-relaxed">
-          I understand my information will be used to coordinate Collection Week and confirm I&apos;m
-          available to serve as a volunteer with Samaritan&apos;s Purse Operation Christmas Child.
-          <span className="block text-ink-light italic mt-1">A liability waiver will be available to sign at the welcome table on Day 1.</span>
+          {t('signup.details.agree')}
         </span>
       </label>
 
@@ -660,7 +660,7 @@ function DetailsStep({
         className="w-full h-16 bg-sp-red text-white text-lg font-semibold rounded-2xl flex items-center justify-center gap-3 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-sp-red-dark transition-colors shadow-card"
       >
         <HandHeart className="w-5 h-5" />
-        Submit my sign-up
+        {t('signup.details.submit')}
       </button>
     </StepShell>
   );
@@ -668,6 +668,8 @@ function DetailsStep({
 
 // ─── Done ────────────────────────────────────────────────────────────────────
 function DoneStep({ signup, onAnother }: { signup?: StoredSignup; onAnother: () => void }) {
+  const { t } = useTranslation();
+  const firstName = signup?.name ? signup.name.split(' ')[0] : '';
   return (
     <motion.section
       initial={{ opacity: 0, y: 12 }}
@@ -682,40 +684,39 @@ function DoneStep({ signup, onAnother }: { signup?: StoredSignup; onAnother: () 
       </div>
 
       <div className="space-y-3">
-        <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-sp-red">You&apos;re on the team</p>
+        <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-sp-red">{t('signup.done.kicker')}</p>
         <h1 className="font-display text-[clamp(2rem,5vw,3rem)] font-medium text-ink leading-[1.05] tracking-tight">
-          Thank you{signup?.name ? `, ${signup.name.split(' ')[0]}` : ''}.
-          <span className="font-display-italic block text-sp-red mt-1">We&apos;ll be in touch.</span>
+          {t('signup.done.title')}{firstName ? `, ${firstName}` : ''}.
+          <span className="font-display-italic block text-sp-red mt-1">{t('signup.done.italic')}</span>
         </h1>
         <p className="text-base text-ink-light italic max-w-md mx-auto leading-relaxed">
-          Your team lead at the closest Central Drop-off will email you the week before
-          Collection Week with check-in details, parking, and what to wear.
+          {t('signup.done.body')}
         </p>
       </div>
 
       <div className="bg-bg-card rounded-2xl shadow-card border border-border-custom p-5 max-w-md mx-auto text-left space-y-2">
-        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-sp-red mb-1">Quick summary</p>
+        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-sp-red mb-1">{t('signup.done.summary')}</p>
         <SummaryLine
-          label="Serving at"
+          label={t('signup.done.summary.servingAt')}
           value={getLocationById(signup?.locationId ?? '')?.name ?? '—'}
         />
-        <SummaryLine label="Phone" value={signup?.phone ?? '—'} />
-        <SummaryLine label="Email" value={signup?.email ?? '—'} />
-        <SummaryLine label="Shirt" value={signup?.shirtSize || '—'} />
+        <SummaryLine label={t('signup.done.summary.phone')} value={signup?.phone ?? '—'} />
+        <SummaryLine label={t('signup.done.summary.email')} value={signup?.email ?? '—'} />
+        <SummaryLine label={t('signup.done.summary.shirt')} value={signup?.shirtSize || '—'} />
       </div>
 
       {signup?.editToken && <MagicLinkCard token={signup.editToken} email={signup.email} />}
 
       <p className="text-sm text-ink-light italic">
-        Until then, share with a friend: <span className="text-sp-red font-semibold">samaritanspurse.org/occ</span>
+        {t('signup.done.shareLine')} <span className="text-sp-red font-semibold">samaritanspurse.org/occ</span>
       </p>
 
       <div className="grid grid-cols-2 gap-3 max-w-md mx-auto">
         <button onClick={onAnother} className="h-12 bg-bg-card border-2 border-border-custom text-ink text-sm font-semibold rounded-2xl hover:border-ink transition-colors">
-          Sign up someone else
+          {t('signup.done.signAnother')}
         </button>
-        <Link to="/login" className="h-12 bg-sp-red text-white text-sm font-semibold rounded-2xl flex items-center justify-center hover:bg-sp-red-dark transition-colors">
-          Back to home
+        <Link to="/" className="h-12 bg-sp-red text-white text-sm font-semibold rounded-2xl flex items-center justify-center hover:bg-sp-red-dark transition-colors">
+          {t('signup.intro.signIn').includes('link') ? 'Home' : 'Inicio'}
         </Link>
       </div>
     </motion.section>
@@ -728,10 +729,8 @@ function DoneStep({ signup, onAnother }: { signup?: StoredSignup; onAnother: () 
 // The same link is also dispatched via the outbox (mocked) so the volunteer
 // has it in their inbox if they close this tab.
 function MagicLinkCard({ token, email }: { token: string; email: string }) {
+  const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
-  // Build the URL from window.location.origin so it works regardless of
-  // where the app is hosted (GitHub Pages, Netlify, localhost, etc.).
-  // HashRouter means we have to use /#/my-signup, not /my-signup.
   const origin =
     typeof window !== 'undefined' ? window.location.origin + window.location.pathname.replace(/\/$/, '') : '';
   const url = `${origin}#/my-signup?token=${token}`;
@@ -742,7 +741,6 @@ function MagicLinkCard({ token, email }: { token: string; email: string }) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // Fallback: select the text. Some browsers block writeText without HTTPS.
       const el = document.querySelector<HTMLInputElement>('#magic-link-input');
       if (el) { el.select(); el.setSelectionRange(0, 99999); }
     }
@@ -753,14 +751,11 @@ function MagicLinkCard({ token, email }: { token: string; email: string }) {
       <div className="flex items-center gap-2">
         <Link2 className="w-4 h-4 text-occ-green-dark" />
         <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-occ-green-dark">
-          Your personal edit link
+          {t('signup.done.magic.title')}
         </p>
       </div>
       <p className="text-xs text-ink leading-relaxed">
-        We also emailed this to <strong>{email}</strong> — check your inbox in a few
-        minutes. Bookmark this link as a backup; update your phone, shirt size, or
-        notes anytime. <strong>Don&apos;t share it</strong> — anyone with the link can
-        edit your signup.
+        {t('signup.done.magic.intro', { email })}
       </p>
       <div className="flex gap-2">
         <input
@@ -779,7 +774,7 @@ function MagicLinkCard({ token, email }: { token: string; email: string }) {
           }`}
         >
           {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-          {copied ? 'Copied' : 'Copy'}
+          {copied ? t('signup.done.magic.copied') : t('signup.done.magic.copy')}
         </button>
       </div>
     </div>

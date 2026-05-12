@@ -18,6 +18,8 @@ import { buildArrivalConfirmation, sendMessage } from '@/lib/outbox';
 import { useNoIndex } from '@/hooks/useNoIndex';
 import KioskPinGate from '@/components/KioskPinGate';
 import { useNavigate } from 'react-router';
+import { useTranslation } from '@/lib/i18n';
+import LanguageToggle from '@/components/LanguageToggle';
 
 /**
  * Welcome Table — fullscreen kiosk for a tablet at the front door.
@@ -36,6 +38,7 @@ import { useNavigate } from 'react-router';
  */
 export default function WelcomeTable() {
   useNoIndex();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const locationId = params.get('loc') || DEFAULT_CDO_ID;
@@ -112,7 +115,7 @@ export default function WelcomeTable() {
           <div>
             <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-sp-red flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-occ-green animate-pulse-live" />
-              Welcome Table · Live
+              {t('kiosk.title')}
             </p>
             <p className="font-display text-xl text-ink leading-tight">
               {location?.name ?? 'Central Drop-off'} · {location?.city}, {location?.state}
@@ -123,13 +126,14 @@ export default function WelcomeTable() {
           <div className="text-right">
             <p className="font-display text-2xl text-ink tabular-nums leading-none">{nowTime}</p>
             <p className="text-[10px] text-ink-light uppercase tracking-wider mt-1">
-              Day {COLLECTION_DAY} of Collection Week
+              {t('kiosk.day', { day: COLLECTION_DAY })}
             </p>
           </div>
+          <LanguageToggle variant="navbar" />
           <Link
             to="/"
             className="touch-target-lg w-12 h-12 rounded-full bg-bg-primary hover:bg-sp-red-light flex items-center justify-center text-ink-light hover:text-sp-red transition-colors"
-            aria-label="Exit kiosk"
+            aria-label={t('kiosk.exit')}
           >
             <X className="w-6 h-6" />
           </Link>
@@ -145,10 +149,10 @@ export default function WelcomeTable() {
           </p>
           <p className="text-base text-ink-light italic">
             {scopedSignups.length === 0
-              ? 'No signups yet at this location'
+              ? t('kiosk.empty')
               : arrivalRate === 100
-              ? 'Everyone’s here. Full house.'
-              : `${arrivalRate}% checked in · ${scopedSignups.length - arrivedCount} pending`}
+              ? t('kiosk.fullHouse')
+              : `${arrivalRate}% · ${scopedSignups.length - arrivedCount}`}
           </p>
         </div>
         <div className="h-2 bg-bg-primary rounded-full overflow-hidden">
@@ -202,10 +206,10 @@ export default function WelcomeTable() {
                         {arrived ? (
                           <>
                             <ClockIcon className="w-3.5 h-3.5 inline -mt-0.5 mr-1" />
-                            Checked in at {arrivedTime}
+                            {t('kiosk.checkedInAt', { time: arrivedTime ?? '' })}
                           </>
                         ) : (
-                          'Tap to check in'
+                          t('kiosk.tapToCheckIn')
                         )}
                       </p>
                     </div>
@@ -243,14 +247,14 @@ export default function WelcomeTable() {
               <div className="w-32 h-32 mx-auto bg-white/15 rounded-full flex items-center justify-center mb-6">
                 <CheckCircle2 className="w-20 h-20" strokeWidth={2} />
               </div>
-              <p className="font-display text-2xl uppercase tracking-[0.3em] mb-2">Welcome</p>
+              <p className="font-display text-2xl uppercase tracking-[0.3em] mb-2">{t('kiosk.welcomeBig')}</p>
               <h1 className="font-display text-6xl sm:text-7xl leading-tight mb-4">
                 {justCheckedIn.name.split(' ')[0]}
               </h1>
               <p className="font-display-italic text-xl opacity-90 max-w-md mx-auto">
                 {justCheckedIn.firstTime
-                  ? 'First-Timer — find a red-shirt team lead to get started.'
-                  : 'Welcome back! Find your team lead in a red shirt.'}
+                  ? t('kiosk.firstTimer')
+                  : t('kiosk.returner')}
               </p>
             </motion.div>
           </motion.div>

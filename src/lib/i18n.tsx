@@ -63,7 +63,8 @@ const DICT: Record<Locale, Record<string, string>> = {
     'signup.contact.phonePlaceholder': '(404) 555-0101',
     'signup.contact.zipLabel': 'ZIP (optional)',
     'signup.contact.zipPlaceholder': '30301',
-    'signup.contact.next': 'Next',
+    'signup.contact.privacy': 'We only use this to coordinate the week. No marketing, no sharing — we promise.',
+    'signup.contact.next': 'Continue',
 
     // Volunteer signup — Details step
     'signup.details.title': 'Almost done.',
@@ -86,6 +87,15 @@ const DICT: Record<Locale, Record<string, string>> = {
     'signup.details.captchaPrompt': 'I\'m not a robot',
     'signup.details.captchaVerifying': 'Verifying…',
     'signup.details.captchaVerified': 'Verified.',
+    'signup.details.dupeWarning': 'We already have a signup with this {{field}}.',
+    'signup.details.dupeBody': 'If that\'s you, use your edit link instead of submitting again — search your inbox for "Operation Christmas Child." Multiple family members sharing one email? Just submit; we\'ll dedupe later.',
+    'signup.details.shirtNone': 'No preference',
+    'signup.details.notesPlaceholder': 'Anything we should know? (optional)',
+    'signup.details.notesHelp': 'Bringing my kids · I have a van for transport · I\'m available the day before for setup · …',
+    'signup.details.emergencyHelp': 'Someone we can reach in an emergency.',
+    'signup.details.firstTimeYesShort': 'Yes',
+    'signup.details.firstTimeNoShort': 'No',
+    'signup.details.agreeShort': 'I agree.',
 
     // Volunteer signup — Done step
     'signup.done.kicker': 'You\'re on the team',
@@ -103,6 +113,8 @@ const DICT: Record<Locale, Record<string, string>> = {
     'signup.done.magic.copied': 'Copied',
     'signup.done.shareLine': 'Until then, share with a friend:',
     'signup.done.signAnother': 'Sign up another volunteer',
+    'signup.done.magic.warning': 'Keep this link private — anyone with it can edit your signup.',
+    'signup.done.magic.note': 'Bookmark it for the next time something changes.',
 
     // MySignup
     'mysignup.kicker': 'Volunteer Self-Service',
@@ -167,7 +179,8 @@ const DICT: Record<Locale, Record<string, string>> = {
     'signup.contact.phonePlaceholder': '(404) 555-0101',
     'signup.contact.zipLabel': 'Código postal (opcional)',
     'signup.contact.zipPlaceholder': '30301',
-    'signup.contact.next': 'Siguiente',
+    'signup.contact.privacy': 'Solo usamos esto para coordinar la semana. No es marketing, ni compartimos tu información — te lo prometemos.',
+    'signup.contact.next': 'Continuar',
 
     // Volunteer signup — Details step
     'signup.details.title': 'Casi listo.',
@@ -190,6 +203,15 @@ const DICT: Record<Locale, Record<string, string>> = {
     'signup.details.captchaPrompt': 'No soy un robot',
     'signup.details.captchaVerifying': 'Verificando…',
     'signup.details.captchaVerified': 'Verificado.',
+    'signup.details.dupeWarning': 'Ya tenemos una inscripción con este {{field}}.',
+    'signup.details.dupeBody': 'Si eres tú, usa tu enlace de edición en vez de enviar otra vez — busca en tu bandeja "Operation Christmas Child." ¿Varios familiares compartiendo un correo? Envía nomás; lo arreglamos después.',
+    'signup.details.shirtNone': 'Sin preferencia',
+    'signup.details.notesPlaceholder': '¿Algo que debamos saber? (opcional)',
+    'signup.details.notesHelp': 'Traigo a mis hijos · Tengo camioneta para transporte · Disponible el día antes para preparativos · …',
+    'signup.details.emergencyHelp': 'Alguien a quien podamos contactar en una emergencia.',
+    'signup.details.firstTimeYesShort': 'Sí',
+    'signup.details.firstTimeNoShort': 'No',
+    'signup.details.agreeShort': 'Acepto.',
 
     // Volunteer signup — Done step
     'signup.done.kicker': 'Estás en el equipo',
@@ -207,6 +229,8 @@ const DICT: Record<Locale, Record<string, string>> = {
     'signup.done.magic.copied': 'Copiado',
     'signup.done.shareLine': 'Mientras tanto, comparte con un amigo:',
     'signup.done.signAnother': 'Inscribir a otro voluntario',
+    'signup.done.magic.warning': 'Mantén este enlace privado — cualquiera con él puede editar tu inscripción.',
+    'signup.done.magic.note': 'Guárdalo para la próxima vez que algo cambie.',
 
     // MySignup
     'mysignup.kicker': 'Autoservicio de Voluntario',
