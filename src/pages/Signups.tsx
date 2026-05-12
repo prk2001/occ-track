@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ClipboardList, Calendar, Users, Lock, Unlock, CalendarOff, Plus, X, Phone, Mail,
+  ClipboardList, Users, Lock, Unlock, CalendarOff, Plus, X, Phone, Mail,
   CheckCircle2, AlertCircle, Shield, Sparkles, ChevronRight, MessageCircle, Trash2,
   Pencil, Search, Mail as MailIcon, RotateCcw, Printer, Download, ArrowDownAZ, ArrowDown01,
   UserCheck, UserX, Eye, EyeOff, Send, KeyRound,
@@ -796,9 +796,12 @@ function DayCard({
 }
 
 // ─── Signup card ────────────────────────────────────────────────────────────
-function SignupCard({
-  signup, isDuplicate, isPiiBlurred, onToggleReveal, onResendLink, onReissueLink, onTransfer, onRemove,
-}: {
+// Memoized — Signups admin can show 100+ rows; every parent state
+// change (search, sort, PII toggle, attendance change) previously
+// re-rendered every card. memo + reference-stable handlers from
+// useCallback cuts this to "only re-render rows whose data changed".
+// Audit P1.22.
+interface SignupCardProps {
   signup: StoredSignup;
   isDuplicate?: boolean;
   isPiiBlurred?: boolean;
@@ -807,7 +810,11 @@ function SignupCard({
   onReissueLink?: () => void;
   onTransfer?: () => void;
   onRemove: () => void;
-}) {
+}
+
+const SignupCard = memo(function SignupCard({
+  signup, isDuplicate, isPiiBlurred, onToggleReveal, onResendLink, onReissueLink, onTransfer, onRemove,
+}: SignupCardProps) {
   const initials = signup.name.split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase();
   // Tailwind doesn't easily blur text without affecting layout. We use
   // a CSS filter so the row keeps its dimensions; hover reveals to make
@@ -946,7 +953,7 @@ function SignupCard({
       </div>
     </motion.li>
   );
-}
+});
 
 // ─── Sort chip ──────────────────────────────────────────────────────────────
 function SortChip({ active, onClick, label, icon }: { active: boolean; onClick: () => void; label: string; icon: React.ReactNode }) {

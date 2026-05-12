@@ -1,6 +1,6 @@
 import { PlusCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { SHOEBOX_ENTRIES, LOCATIONS, formatCount } from '@/data/mockData';
+import { SHOEBOX_ENTRIES, LOCATIONS } from '@/data/mockData';
 
 export default function GreeterDashboard() {
   const locationId = 'cdo1';

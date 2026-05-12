@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { Lock, ShieldCheck, KeyRound, X, AlertTriangle } from 'lucide-react';
 import {
   isKioskPinSet,

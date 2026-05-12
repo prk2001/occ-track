@@ -1,4 +1,4 @@
-import { Gift, Warehouse, BarChart3, MapPin, AlertTriangle, ChevronRight } from 'lucide-react';
+import { Gift, Warehouse, BarChart3, MapPin, AlertTriangle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { LOCATIONS, REGION_DATA, formatCount, getShoeboxesForLocation } from '@/data/mockData';
 import WelcomeTableWidget from '@/components/dashboard/WelcomeTableWidget';

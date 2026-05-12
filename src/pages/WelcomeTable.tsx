@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  UserCheck, CheckCircle2, X, ArrowLeft, MapPin, Sparkles, Clock as ClockIcon,
+  CheckCircle2, X, ArrowLeft, Sparkles, Clock as ClockIcon,
 } from 'lucide-react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { Mark } from '@/components/Logo';

@@ -1,9 +1,9 @@
 # OCC Track — Master TODO
 
-**Last audit:** Phase 31 complete — addressed the external audit's
-fast fixes + critical P0 + key P1 items. 139 tests across 16 files,
-all green. Initial bundle dropped from 358 KB → 292 KB gzipped via
-route code-splitting. Source at `https://github.com/prk2001/occ-track`.
+**Last audit:** Phase 32 complete — round 2 of audit fixes. 139 tests
+across 16 files green. Initial bundle 292 KB gzipped. 5 unused deps
+removed. Strict tsconfig (`noUnusedLocals`/`noUnusedParameters` ON).
+Source at `https://github.com/prk2001/occ-track`.
 
 This document inventories everything the prototype already has, then maps
 every remaining gap a real Samaritan's Purse / Operation Christmas Child
@@ -88,6 +88,43 @@ engineer-week of focused work; priorities reflect what blocks production.
 ---
 
 ## Recent completions (since the last TODO refresh)
+
+- **Phase 32 — Round 2 audit fixes.** Picked off the remaining high-leverage
+  items the auditor flagged:
+    - **P0.2 — 5 unused deps removed**: react-router-dom, date-fns, zod,
+      @hookform/resolvers, tw-animate-css. Each grepped + verified zero
+      imports before removal. Bundle stayed at 292 KB (already
+      tree-shaken) but dep tree is cleaner.
+    - **P0.7 — Settings toggles now `role="switch" aria-checked="…"`** with
+      semantic `aria-label="${label} — ${sub}"`. Screen readers
+      announce the on/off state correctly.
+    - **P1.20 / P1.34 — Idle lock now UNMOUNTS content**. Was a
+      cosmetic blur overlay (data still in DOM, visible to screenshots
+      + devtools). Now the entire main is replaced with a privacy
+      placeholder while locked. Screenshot of the locked screen reveals
+      nothing about the user's role or roster.
+    - **P1.28 — Magic link URL scrubbing**. On MySignup mount, the
+      token is read into in-memory state then immediately stripped from
+      the URL bar via `history.replaceState`. Token can't be lifted
+      from a screen-share / over-the-shoulder glance. Was also already
+      protected from Referer / server-logs by HashRouter (fragment-only).
+    - **P1.22 — `React.memo(SignupCard)`**. Admin Signups can show 100+
+      rows; every PII-blur/sort/search previously re-rendered every
+      card. memo + reference-stable handlers cuts to "only changed
+      rows re-render."
+    - **P1.23 — `useMemo(navItems)`** in Navbar. Array reference is
+      stable across renders so downstream consumers don't churn.
+    - **P2.14 — `console.*` stripped in production builds** via
+      Vite's `esbuild.drop`. Dev keeps the FIFO/error logs we wired in
+      Phase 31; prod ships silent.
+    - **P2.15 — Email validation tightened**: was `/.+@.+\..+/`,
+      now `/^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i` (no whitespace, real TLD).
+    - **P2.18 — `document.title` per route**: useDocumentTitle hook
+      sets "OCC Track — <pageTitle>" while the page is mounted +
+      restores on unmount. Better tab labels + browser-history autocomplete.
+    - **P2.19 — `noUnusedLocals` + `noUnusedParameters`** flipped on in
+      tsconfig.app.json. Caught and cleaned 12 dead imports across 7
+      files. Future dead code now fails compile, not just lint.
 
 - **Phase 31 — External audit fixes (143-item review).** Closed every
   fast-fix + most P0/P1 items the auditor flagged:

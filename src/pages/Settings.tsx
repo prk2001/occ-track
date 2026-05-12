@@ -307,6 +307,10 @@ function SettingsSection({ icon: Icon, title, children }: { icon: typeof Setting
 function ToggleRow({ label, sub, enabled, onChange }: { label: string; sub: string; enabled: boolean; onChange: (v: boolean) => void }) {
   return (
     <button
+      type="button"
+      role="switch"
+      aria-checked={enabled}
+      aria-label={`${label} — ${sub}`}
       onClick={() => onChange(!enabled)}
       className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-bg-cream/40 transition-colors border-b border-border-custom/60 last:border-0"
     >
@@ -315,6 +319,7 @@ function ToggleRow({ label, sub, enabled, onChange }: { label: string; sub: stri
         <p className="text-[11px] text-ink-light">{sub}</p>
       </div>
       <span
+        aria-hidden="true"
         className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${
           enabled ? 'bg-occ-green' : 'bg-ink-light/30'
         }`}

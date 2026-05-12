@@ -8,6 +8,12 @@ import { inspectAttr } from 'plugin-inspect-react-code'
 export default defineConfig({
   base: './',
   plugins: [inspectAttr(), react()],
+  // Audit P2.14: strip console.* + debugger in production builds.
+  // Keep them in dev so engineering can see the FIFO/error logs we wired
+  // up in Phase 31. In production they\'d be noise + a minor leak vector.
+  esbuild: {
+    drop: process.env.NODE_ENV === 'production' ? ['console', 'debugger'] : [],
+  },
   test: {
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],

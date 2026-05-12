@@ -46,7 +46,10 @@ export default function Navbar({ title }: NavbarProps) {
     }
   }, [notifOpen, user]);
 
-  const navItems = [
+  // Memoized so the items array reference is stable across renders.
+  // Otherwise downstream consumers (key/map) would re-mount unnecessarily.
+  // Audit P1.23.
+  const navItems = useMemo(() => [
     { label: 'Dashboard', path: '/', icon: 'home' },
     { label: 'States', path: '/states', icon: 'states' },
     { label: 'Check-In', path: '/checkin', icon: 'checkin' },
@@ -75,7 +78,7 @@ export default function Navbar({ title }: NavbarProps) {
         ]
       : []),
     { label: 'Settings', path: '/settings', icon: 'settings' },
-  ];
+  ], [isRegionalAdmin, isSuperAdmin]);
 
   return (
     <>
@@ -314,24 +317,5 @@ function LiveNotificationItem({
   );
 }
 
-// Deprecated — kept for any external import that hasn't migrated.
-// New code should use LiveNotificationItem with a backing OutboxMessage.
-function NotificationItem({ type, title, message, time }: { type: string; title: string; message: string; time: string }) {
-  const colors: Record<string, { bg: string; icon: string }> = {
-    success: { bg: 'bg-occ-green-light', icon: 'text-occ-green' },
-    warning: { bg: 'bg-gold-light', icon: 'text-gold' },
-    info: { bg: 'bg-blue-light', icon: 'text-blue-accent' },
-    error: { bg: 'bg-sp-red-light', icon: 'text-sp-red' },
-  };
-  const c = colors[type] || colors.info;
-  return (
-    <div className="flex gap-3 p-3 rounded-xl bg-bg-primary">
-      <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${type === 'success' ? 'bg-occ-green' : type === 'warning' ? 'bg-gold' : 'bg-blue-accent'}`} />
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-navy">{title}</p>
-        <p className="text-xs text-slate mt-0.5">{message}</p>
-        <p className="text-[10px] text-slate-light mt-1">{time}</p>
-      </div>
-    </div>
-  );
-}
+// (Deprecated NotificationItem removed — no consumers; LiveNotificationItem
+// is the active component. Audit Phase 32 cleanup.)

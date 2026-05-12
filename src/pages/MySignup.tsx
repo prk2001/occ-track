@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { useNoIndex } from '@/hooks/useNoIndex';
 import { useTranslation } from '@/lib/i18n';
@@ -51,6 +51,25 @@ export default function MySignup() {
   const { t } = useTranslation();
   const [params] = useSearchParams();
   const token = params.get('token') ?? '';
+
+  // Audit P1.28: scrub the token from the URL bar AFTER reading it into
+  // state. Under HashRouter the token was already in the fragment (so
+  // never sent in the Referer header or to server logs), but it remained
+  // visible in:
+  //   - screenshots / screen shares
+  //   - the browser URL bar (anyone glancing at the screen)
+  //   - browser history entries created from this point forward
+  // history.replaceState scrubs the search params from the URL without
+  // navigating — the in-memory token is what the lookup uses.
+  useEffect(() => {
+    if (!token || typeof window === 'undefined') return;
+    const hash = window.location.hash; // e.g. "#/my-signup?token=abc"
+    if (hash.includes('?token=')) {
+      const scrubbed = hash.split('?')[0]; // → "#/my-signup"
+      const newUrl = `${window.location.pathname}${window.location.search}${scrubbed}`;
+      window.history.replaceState(null, '', newUrl);
+    }
+  }, [token]);
   const [signups, setSignups] = useLocalStorage<StoredSignup[]>('occ:signups', []);
   const [saved, setSaved] = useState(false);
 

@@ -3,7 +3,7 @@ import { Link } from 'react-router';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   HandHeart, ChevronLeft, ChevronRight, X, User, Phone, Mail, MapPin,
-  CheckCircle2, Sparkles, Shield, Shirt, MessageCircle, CalendarDays, Lock,
+  Sparkles, Shield, Shirt, MessageCircle, CalendarDays, Lock,
   Link2, Copy, Check, AlertTriangle,
 } from 'lucide-react';
 import Layout from '@/components/Layout';
@@ -222,7 +222,13 @@ export default function VolunteerSignup() {
   }
 
   // Step gating
-  const contactOk = draft.name.trim().length > 1 && /.+@.+\..+/.test(draft.email) && draft.phone.trim().length >= 7;
+  // Audit P2.15: tighten email validation. Was `/.+@.+\..+/` which
+  // accepted spaces, emojis, and other invalid characters. The pattern
+  // below is RFC-5322-ish: no whitespace, no leading/trailing dot in
+  // local part, 2-char minimum TLD. Good enough for client-side; the
+  // server should still re-validate in production.
+  const EMAIL_OK = /^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i;
+  const contactOk = draft.name.trim().length > 1 && EMAIL_OK.test(draft.email.trim()) && draft.phone.trim().length >= 7;
   const finalOk = draft.agree;
 
   return (

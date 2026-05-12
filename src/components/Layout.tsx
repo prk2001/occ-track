@@ -8,6 +8,7 @@ import LockOverlay from './LockOverlay';
 import ModeBanner from './ModeBanner';
 import { useIdleLock } from '@/hooks/useIdleLock';
 import { useAuth } from '@/hooks/useAuth';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 
 const PAGE_TITLES: Record<string, string> = {
   '/': 'Dashboard',
@@ -47,6 +48,9 @@ export default function Layout({ children, hideNav, noIdleLock }: LayoutProps) {
   const location = useLocation();
   const { isAuthenticated } = useAuth();
   const title = PAGE_TITLES[location.pathname] || 'OCC Track';
+  // Audit P2.18: per-route document.title for better tab labels +
+  // browser-history autocomplete.
+  useDocumentTitle(title === 'OCC Track' ? '' : title);
 
   // Idle lock applies when:
   //   - The route is private (admin/leadership pages)
@@ -79,8 +83,15 @@ export default function Layout({ children, hideNav, noIdleLock }: LayoutProps) {
           exit={{ opacity: 0 }}
           transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
           className="flex-1 pb-20 lg:pb-6"
+          // Audit P1.34: when the idle lock fires, render the placeholder
+          // instead of `children`. Was previously a cosmetic blur overlay —
+          // the data was still in DOM, visible to screenshots, accessible
+          // via devtools. Now: the content tree is REPLACED while locked,
+          // so a screenshot of the locked screen shows only the lock
+          // overlay + a "locked" placeholder. Defense in depth.
+          aria-hidden={locked ? 'true' : undefined}
         >
-          {children}
+          {locked && idleLockActive ? <LockedPlaceholder /> : children}
         </motion.main>
       </AnimatePresence>
       <Footer />
@@ -88,6 +99,26 @@ export default function Layout({ children, hideNav, noIdleLock }: LayoutProps) {
       {idleLockActive && (
         <LockOverlay visible={locked} warning={warning} onUnlock={dismissLock} />
       )}
+    </div>
+  );
+}
+
+/**
+ * Empty placeholder rendered when the idle lock has unmounted the
+ * page content. Pairs with LockOverlay which sits ON TOP of this. The
+ * placeholder is intentionally devoid of any data — even a screenshot
+ * of this exact moment in time reveals nothing about the user's role
+ * or roster. Audit P1.34.
+ */
+function LockedPlaceholder() {
+  return (
+    <div className="min-h-[60vh] flex items-center justify-center px-4">
+      <div className="text-center text-ink-light/30">
+        <p className="text-[10px] uppercase tracking-[0.3em] font-bold">Session paused</p>
+        <p className="text-xs italic mt-2 max-w-xs">
+          Content cleared for privacy while inactive.
+        </p>
+      </div>
     </div>
   );
 }

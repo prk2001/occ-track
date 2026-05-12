@@ -1,7 +1,7 @@
 import { Gift, Package, FileText, Truck, PlusCircle, TrendingUp, Clock, UserCheck, QrCode } from 'lucide-react';
 import { motion } from 'framer-motion';
 import {
-  SHOEBOX_ENTRIES, CARTONS, LOCATIONS, getDropoffsForCDO, getShoeboxesForCDO,
+  getDropoffsForCDO, getShoeboxesForCDO,
   getShoeboxesForLocation, getCartonsForLocation, getRecentCheckins, formatCount,
 } from '@/data/mockData';
 
