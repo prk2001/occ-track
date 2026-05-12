@@ -1,8 +1,8 @@
 # OCC Track — Master TODO
 
-**Last audit:** Phase 29 complete (Spanish coverage + GitHub publish).
-Dev preview at `https://attendance-generations-heading-stating.trycloudflare.com`,
-source at `https://github.com/prk2001/occ-track`.
+**Last audit:** Phase 30 complete — testing infrastructure (Vitest + RTL +
+Playwright + GitHub Actions CI). 116 tests across 14 files, all green.
+Source at `https://github.com/prk2001/occ-track`.
 
 This document inventories everything the prototype already has, then maps
 every remaining gap a real Samaritan's Purse / Operation Christmas Child
@@ -20,10 +20,11 @@ engineer-week of focused work; priorities reflect what blocks production.
 | Lib + hooks | 14 |
 | TypeScript LOC | ~12,200 |
 | Commits since Phase 14 | 15 |
-| Tests | **0** (Vitest configured but unused) |
+| Tests | **116** (113 unit/component + 3 E2E) |
 | Real backend | **0** (everything is localStorage) |
 | Public GitHub URL | https://github.com/prk2001/occ-track |
 | Spanish coverage | **Complete** for all public surfaces (Phase 29) |
+| CI | GitHub Actions: tsc + vitest + Playwright on every PR (Phase 30) |
 
 ---
 
@@ -86,6 +87,19 @@ engineer-week of focused work; priorities reflect what blocks production.
 
 ## Recent completions (since the last TODO refresh)
 
+- **Phase 30 — Testing infrastructure.** Vitest + RTL + Playwright + GitHub
+  Actions CI all wired. 116 tests across 14 files, all green:
+    - 9 unit-test files (99 tests) covering every pure module: `auditLog`,
+      `outbox`, `security`, `appMode`, `i18n`, `kioskPin`, `tamperDetection`,
+      `anomalyDetector`, mockData helpers (`normalizeEmail`, `normalizePhone`,
+      `findDuplicateSignups`, `signupInScopeForUser`, `inferCdoFromZip`,
+      `tokenStatus`).
+    - 4 component-test files (14 tests) for `TurnstileStub`, `ModeBanner`,
+      `ModeLockedCard`, `LockOverlay`.
+    - 1 E2E spec (3 tests) for the volunteer signup → magic link → self-edit
+      flow + recovery + Spanish toggle.
+    - GitHub Actions `.github/workflows/ci.yml` with two parallel jobs
+      (unit+build, e2e) + Playwright browser cache + artifact upload on failure.
 - **Phase 29 — Spanish coverage gap closed.** All public surfaces now use `t()`:
   ContactStep, DetailsStep, DoneStep, MagicLinkCard, MySignup, Welcome Table
   kiosk (with a navbar-variant LanguageToggle inside the kiosk), LockoutPage
@@ -171,11 +185,17 @@ Still open:
 - [ ] **Additional languages** if needed for the OCC volunteer demographic: Korean, Vietnamese, Mandarin (large in West Coast OCC drives). _M · 2d per language._
 - [ ] **Admin pages translation** — `/signups`, `/audit-log`, `/outbox`, `/security`, `/settings`. Currently English-only (real CDO Leaders interface with SP HQ in English). _M · 2-3d per page._
 
-#### P1.2 Testing
-- [ ] **Unit tests** for `auditLog`, `outbox`, `security`, `tamperDetection`, `appMode`, `i18n`, `kioskPin` — pure functions, easy targets. _M · 3d._
-- [ ] **Component tests** with React Testing Library for `SignupCard`, `TurnstileStub`, `LockOverlay`, `KioskPinGate`. _M · 3d._
-- [ ] **E2E tests** with Playwright covering: full signup → magic link → edit; admin role switching; CDO scoping; idle lock; tamper detection. _L · 1wk._
-- [ ] **Accessibility audit** with axe-core in CI; fix all critical issues. _M · 2-3d._
+#### P1.2 Testing — ✅ MOSTLY DONE (Phase 30)
+- [x] **Unit tests** for `auditLog`, `outbox`, `security`, `tamperDetection`, `appMode`, `i18n`, `kioskPin`, `anomalyDetector`, mockData helpers — 99 tests across 9 files. Catches regressions in every privacy/security primitive.
+- [x] **Component tests** with React Testing Library for `TurnstileStub`, `ModeBanner`, `ModeLockedCard`, `LockOverlay` — 14 tests across 4 files. Covers the modal/overlay components most likely to drift.
+- [x] **E2E tests** with Playwright covering: complete signup wizard → magic link → self-edit; /my-signup recovery flow; EN/ES language toggle. 3 tests, ~10 seconds.
+- [x] **GitHub Actions CI** at `.github/workflows/ci.yml` — two jobs (unit+build, e2e) with caching. Blocks PR merges if anything is red. `workflow_dispatch` enabled for manual runs.
+
+Still open:
+- [ ] **Coverage thresholds** — currently we collect coverage but don\\\'t enforce a minimum. Add Vitest config that fails CI under 80% line coverage on `src/lib/**`. _S · 1hr._
+- [ ] **More component tests** for `SignupCard` (the most complex component — blur/duplicate/badge state), `BulkImportDialog`, `TransferDialog`, `KioskPinGate`. _M · 2-3d._
+- [ ] **More E2E flows**: admin role switching → CDO scoping; idle lock + re-confirm; tamper detection trips a security signal; bulk CSV import; cross-CDO transfer dispatches both notifications. _L · 1wk._
+- [ ] **Accessibility audit** with axe-core integrated into Playwright; fix all critical issues. _M · 2-3d._
 - [ ] **Load testing** (k6 or Artillery) — simulate 1000 concurrent signups + 100 concurrent admins. _M · 2-3d, post-backend._
 - [ ] **Penetration test** by a third party (HackerOne, Bugcrowd, or specialist firm). _XL · 2-4wk lead time._
 
@@ -236,6 +256,14 @@ Still open:
 
 #### P2.4 Security hardening (real production)
 - [ ] **CSP nonces** (per-request) replacing `'unsafe-inline'` fallback. _M · 2-3d._
+  - **Context:** Phase 30 relaxed the meta-tag CSP in `index.html` to use
+    `'unsafe-inline' 'unsafe-eval'` so Vite's dev HMR client + module loader
+    work. The stricter HTTP-header CSP (`'strict-dynamic'`) is still
+    enforced in production via `netlify.toml` / `vercel.json` / `public/_headers`
+    — HTTP-header CSP takes precedence over meta-tag in browsers. So production
+    is still strict; only local-dev meta-tag is relaxed. Future work: generate
+    per-request nonces and inject them into both the meta tag and a dynamic
+    HTTP header. Requires SSR or edge-function wrapping.
 - [ ] **Subresource Integrity** on the Google Fonts stylesheet. _S · 1hr._
 - [ ] **Real Cloudflare named tunnel** with custom subdomain (replacing ephemeral trycloudflare URL). _S · 1d._
 - [ ] **Security.txt** at `/.well-known/security.txt` per RFC 9116. _S · 30min._
@@ -265,7 +293,7 @@ If I were a PM allocating one engineer-week per sprint, the order would be:
 |---|---|---|
 | 1 | **P0.1 backend + P0.3 deployment** | Supabase + Vercel + custom domain. Move localStorage → DB. Real auth. |
 | 2 | **P0.2 compliance + P0.4 real email/SMS** | Privacy policy + ToS + Resend + Telnyx + Cloudflare WAF + Turnstile. |
-| 3 | **P1.2 testing** (P1.1 i18n ✅ DONE) | Unit + component tests. CI green. |
+| 3 | **P1.2 testing** ✅ DONE — see Recent completions | (Phase 30) 116 tests + CI. |
 | 4 | **P1.3 docs + P2.2 a11y** | Admin/volunteer guides. WCAG AA pass. Performance pass. |
 
 Then start the P1.4 real-world feature list based on what SP-OCC leadership

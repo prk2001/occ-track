@@ -22,18 +22,23 @@
          Google Fonts is whitelisted for the DM Sans + Geist typefaces.
          data: URIs allowed for images so the print badges can inline
          the OCC mark. ============================================== -->
+    <!-- Meta-tag CSP — a permissive fallback that works in both dev and
+         production. The STRICTER CSP (with strict-dynamic + no unsafe-eval)
+         is enforced via HTTP response headers in netlify.toml + vercel.json
+         + public/_headers. HTTP-header CSP takes precedence over meta-tag
+         CSP in production, so this looser version below is only ever the
+         active policy during local dev (where security headers aren't served).
+         connect-src includes ws: and wss: so HMR works locally. -->
     <meta http-equiv="Content-Security-Policy" content="
       default-src 'self';
-      script-src 'self' 'strict-dynamic' 'unsafe-inline';
+      script-src 'self' 'unsafe-inline' 'unsafe-eval';
       style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
       font-src 'self' https://fonts.gstatic.com data:;
       img-src 'self' data: blob:;
-      connect-src 'self';
-      frame-ancestors 'none';
+      connect-src 'self' ws: wss:;
       base-uri 'self';
       form-action 'self';
       object-src 'none';
-      upgrade-insecure-requests;
     " />
 
     <!-- Belt: deny embedding (clickjacking defense). Modern browsers
