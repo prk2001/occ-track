@@ -26,6 +26,7 @@ import TransferDialog from '@/components/TransferDialog';
 import { Upload, ArrowRightLeft } from 'lucide-react';
 import { logSecuritySignal } from '@/lib/security';
 import { useNoIndex } from '@/hooks/useNoIndex';
+import { getFirstName } from '@/lib/name';
 
 // Seed: Saturday is often covered by a youth group. Demos the blocked
 // state on first load; user can clear via Reopen.
@@ -126,7 +127,11 @@ export default function Signups() {
     if (scopedSignups.length === 0) return;
     const escape = (v: string | number | boolean | null | undefined) => {
       if (v === null || v === undefined) return '';
-      const s = String(v).replace(/"/g, '""');
+      let s = String(v).replace(/"/g, '""');
+      // Defuse Excel/Sheets formula injection — if the value starts with
+      // = + - @ TAB or CR, prefix with an apostrophe so spreadsheets render
+      // it as text instead of evaluating it. Audit P1.30.
+      if (/^[=+\-@\t\r]/.test(s)) s = `\'${s}`;
       return /[",\n]/.test(s) ? `"${s}"` : s;
     };
     const cdoCol = (s: StoredSignup) => LOCATIONS.find((l) => l.id === (s.locationId ?? DEFAULT_CDO_ID))?.name ?? '';
@@ -246,7 +251,7 @@ export default function Signups() {
       to: target.email,
       toName: target.name,
       subject: 'Your edit link (resent) — Operation Christmas Child',
-      body: `Hi ${target.name.split(' ')[0]},\n\nHere\'s your edit link, resent at your request:\n\n${url}\n\nThis link is private — anyone with it can edit your signup. Bookmark it.\n\nSamaritan\'s Purse · Operation Christmas Child`,
+      body: `Hi ${getFirstName(target.name)},\n\nHere\'s your edit link, resent at your request:\n\n${url}\n\nThis link is private — anyone with it can edit your signup. Bookmark it.\n\nSamaritan\'s Purse · Operation Christmas Child`,
       relatedTarget: `signup:${id}`,
     });
     logAuditEvent(actor, 'email_all', `signup:${id}`, `Resent existing magic link to ${target.name} (${target.email})`);
@@ -284,7 +289,7 @@ export default function Signups() {
       to: target.email,
       toName: target.name,
       subject: 'NEW edit link (security reissue) — Operation Christmas Child',
-      body: `Hi ${target.name.split(' ')[0]},\n\nYour Central Drop-off Leader has issued you a fresh edit link. The OLD link no longer works.\n\nHere is your NEW link:\n\n${url}\n\nIf you did not request this, please contact your Central Drop-off Leader immediately.\n\nSamaritan\'s Purse · Operation Christmas Child`,
+      body: `Hi ${getFirstName(target.name)},\n\nYour Central Drop-off Leader has issued you a fresh edit link. The OLD link no longer works.\n\nHere is your NEW link:\n\n${url}\n\nIf you did not request this, please contact your Central Drop-off Leader immediately.\n\nSamaritan\'s Purse · Operation Christmas Child`,
       relatedTarget: `signup:${id}`,
     });
     logAuditEvent(actor, 'volunteer_self_edit', `signup:${id}`, `REISSUED magic link for ${target.name} — old token revoked`);

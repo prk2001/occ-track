@@ -57,7 +57,8 @@ export function setProtected(key: string, value: string): void {
     const cs = checksumFor(key, value);
     window.localStorage.setItem(key, value);
     window.localStorage.setItem(CHECKSUM_PREFIX + key, cs);
-  } catch {
+  } catch (e) {
+    console.error('[OCC tamperDetection]', e);
     // localStorage full or disabled — swallow.
   }
 }

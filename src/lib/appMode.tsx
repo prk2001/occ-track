@@ -55,7 +55,8 @@ function writeModeHistory(records: ModeChangeRecord[]): void {
   if (typeof window === 'undefined') return;
   try {
     window.localStorage.setItem(APP_MODE_HISTORY_KEY, JSON.stringify(records.slice(0, 200)));
-  } catch {
+  } catch (e) {
+    console.error('[OCC appMode]', e);
     // best-effort
   }
 }
@@ -99,7 +100,8 @@ export function requireTestMode(action: string): boolean {
         timestamp: new Date().toISOString(),
       });
       window.localStorage.setItem('occ:mode-blocks', JSON.stringify(existing.slice(0, 100)));
-    } catch {
+    } catch (e) {
+      console.error('[OCC appMode]', e);
       // best-effort
     }
   }
@@ -142,7 +144,8 @@ export function AppModeProvider({ children }: { children: ReactNode }) {
     if (typeof window === 'undefined') return;
     try {
       window.localStorage.setItem(APP_MODE_KEY, next);
-    } catch {
+    } catch (e) {
+      console.error('[OCC appMode]', e);
       // best-effort
     }
     setModeState(next);
@@ -169,7 +172,7 @@ export function AppModeProvider({ children }: { children: ReactNode }) {
     if (actor) {
       logAuditEvent(
         { id: actor.id, name: actor.name, role: actor.role },
-        'reset_day_times', // closest existing action; in production add a dedicated kind
+        'switch_app_mode',
         'app-mode',
         `Switched app mode: ${previous.toUpperCase()} → ${next.toUpperCase()}${reason ? ` (${reason})` : ''}`,
       );

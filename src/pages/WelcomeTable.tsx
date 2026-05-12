@@ -20,6 +20,7 @@ import KioskPinGate from '@/components/KioskPinGate';
 import { useNavigate } from 'react-router';
 import { useTranslation } from '@/lib/i18n';
 import LanguageToggle from '@/components/LanguageToggle';
+import { getFirstName } from '@/lib/name';
 
 /**
  * Welcome Table — fullscreen kiosk for a tablet at the front door.
@@ -236,6 +237,8 @@ export default function WelcomeTable() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             className="fixed inset-0 bg-occ-green/95 flex flex-col items-center justify-center z-50 pointer-events-none"
+            role="status"
+            aria-live="assertive"
           >
             <motion.div
               initial={{ scale: 0.5, opacity: 0 }}
@@ -249,7 +252,7 @@ export default function WelcomeTable() {
               </div>
               <p className="font-display text-2xl uppercase tracking-[0.3em] mb-2">{t('kiosk.welcomeBig')}</p>
               <h1 className="font-display text-6xl sm:text-7xl leading-tight mb-4">
-                {justCheckedIn.name.split(' ')[0]}
+                {getFirstName(justCheckedIn.name)}
               </h1>
               <p className="font-display-italic text-xl opacity-90 max-w-md mx-auto">
                 {justCheckedIn.firstTime

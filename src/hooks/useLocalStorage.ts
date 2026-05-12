@@ -13,7 +13,8 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
   useEffect(() => {
     try {
       window.localStorage.setItem(key, JSON.stringify(storedValue));
-    } catch {
+    } catch (e) {
+      console.error('[OCC useLocalStorage]', e);
       // ignore
     }
   }, [key, storedValue]);

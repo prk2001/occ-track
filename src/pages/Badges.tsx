@@ -13,6 +13,7 @@ import {
 import type { StoredSignup } from '@/data/mockData';
 import { logAuditEvent } from '@/lib/auditLog';
 import { useNoIndex } from '@/hooks/useNoIndex';
+import { getFirstName } from '@/lib/name';
 
 /**
  * Volunteer name-tag printout — Avery 5390 (8 per page, 3⅜" × 2⅓").
@@ -207,7 +208,7 @@ export default function Badges() {
 // ─── Single badge ─────────────────────────────────────────────────────────
 function BadgeCard({ signup }: { signup: StoredSignup }) {
   const cdo = getLocationById(signup.locationId ?? DEFAULT_CDO_ID);
-  const firstName = signup.name.split(' ')[0];
+  const firstName = getFirstName(signup.name);
   return (
     <div className="badge-card bg-white border border-border-custom rounded-xl p-6 flex flex-col justify-between min-h-[200px] shadow-card-elevated">
       {/* Header — branding strip */}

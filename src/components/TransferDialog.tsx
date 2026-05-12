@@ -8,6 +8,7 @@ import type { StoredSignup, User } from '@/data/mockData';
 import { logAuditEvent } from '@/lib/auditLog';
 import { sendMessage, buildCdoSignupAlert } from '@/lib/outbox';
 import { USERS, getLocationById } from '@/data/mockData';
+import { getFirstName } from '@/lib/name';
 
 /**
  * Cross-CDO transfer dialog.
@@ -84,7 +85,7 @@ export default function TransferDialog({
       to: signup.email,
       toName: signup.name,
       subject: 'Your Collection Week CDO has changed',
-      body: `Hi ${signup.name.split(' ')[0]},\n\nWe wanted to let you know we moved your signup from ${oldLoc?.name ?? 'your previous CDO'} to ${newLoc?.name ?? 'a new CDO'}.${reason ? `\n\nReason: ${reason}` : ''}\n\nYour existing edit link still works — no need to sign up again. If you have any questions, contact your new CDO Leader.\n\nSamaritan\'s Purse · Operation Christmas Child`,
+      body: `Hi ${getFirstName(signup.name)},\n\nWe wanted to let you know we moved your signup from ${oldLoc?.name ?? 'your previous CDO'} to ${newLoc?.name ?? 'a new CDO'}.${reason ? `\n\nReason: ${reason}` : ''}\n\nYour existing edit link still works — no need to sign up again. If you have any questions, contact your new CDO Leader.\n\nSamaritan\'s Purse · Operation Christmas Child`,
       relatedTarget: `signup:${signup.id}`,
     });
 

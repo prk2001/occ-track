@@ -1,3 +1,5 @@
+import { getFirstName } from '@/lib/name';
+
 /**
  * Personal greeting that names the user and acknowledges the time of day.
  * Replaces impersonal hero copy on dashboards with something that *feels*
@@ -19,7 +21,7 @@ function timeOfDay(): 'morning' | 'afternoon' | 'evening' | 'night' {
 
 export default function WarmGreeting({ name, subtitle, className = '' }: WarmGreetingProps) {
   const period = timeOfDay();
-  const firstName = name?.split(' ')[0];
+  const firstName = name ? getFirstName(name) : undefined;
   return (
     <div className={className}>
       <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-sp-red mb-2">

@@ -18,8 +18,13 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  // Default to Super Admin (Franklin Graham) — most impressive entry point for demo.
-  const [user, setUser] = useState<User | null>(USERS[0]);
+  // SECURITY: default to null, NOT to a role. A fresh page load shows the
+  // /login role-picker so PII is never auto-exposed. The demo picker on
+  // /login lets evaluators jump into any role with one click; production
+  // would replace that with a real auth flow (SSO + magic-link).
+  // (Was previously: useState<User | null>(USERS[0]) — auto-elevated to
+  // Super Admin, exposing all PII immediately. Fixed per audit P0.4/P0.12.)
+  const [user, setUser] = useState<User | null>(null);
 
   const login = useCallback((role: UserRole) => {
     const found = USERS.find(u => u.role === role);

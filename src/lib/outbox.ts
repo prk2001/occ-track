@@ -10,6 +10,8 @@
 // would in production. When you swap mock → real (e.g. wiring up Telnyx),
 // only this file changes. Every consumer keeps the same interface.
 
+import { getFirstName } from './name';
+
 export const OUTBOX_KEY = 'occ:outbox';
 export const OUTBOX_CAP = 200;
 
@@ -66,9 +68,12 @@ export function sendMessage(msg: Omit<OutboxMessage, 'id' | 'sentAt' | 'status'>
     const raw = window.localStorage.getItem(OUTBOX_KEY);
     const existing: OutboxMessage[] = raw ? JSON.parse(raw) : [];
     const next = [sent, ...existing].slice(0, OUTBOX_CAP);
+    if (existing.length + 1 > OUTBOX_CAP) {
+      console.warn(`[OCC outbox] FIFO truncation: dropped ${existing.length + 1 - OUTBOX_CAP} oldest message(s). Increase OUTBOX_CAP or persist to backend.`);
+    }
     window.localStorage.setItem(OUTBOX_KEY, JSON.stringify(next));
-  } catch {
-    // Outbox writes must never break the user flow.
+  } catch (e) {
+    console.error('[OCC outbox] write failed:', e);
   }
   return sent;
 }
@@ -91,6 +96,7 @@ export function getOutbox(): OutboxMessage[] {
 export function buildSignupConfirmation(args: {
   name: string;
   email: string;
+  phone?: string;
   magicLinkUrl: string;
   channel: 'email' | 'sms';
 }): Omit<OutboxMessage, 'id' | 'sentAt' | 'status'> {
@@ -102,7 +108,7 @@ export function buildSignupConfirmation(args: {
       toName: args.name,
       subject: 'You\'re on the team — Operation Christmas Child',
       body:
-`Hi ${args.name.split(' ')[0]},
+`Hi ${getFirstName(args.name)},
 
 Thank you for signing up to serve during Operation Christmas Child Collection Week 2026 (Nov 16–23). Your team lead at the closest Central Drop-off will be in touch the week before with check-in details, parking, and what to wear.
 
@@ -119,7 +125,7 @@ Samaritan's Purse · Operation Christmas Child`,
   return {
     kind: 'signup_confirmation',
     channel: 'sms',
-    to: args.email, // for SMS this would be the phone, but we don't have it cleanly typed here
+    to: args.phone ?? args.email, // SMS routes to phone; email kept as a fallback so legacy callers don't break
     toName: args.name,
     body: `OCC: You're on the team for Collection Week 2026. Update your info anytime: ${args.magicLinkUrl} — Samaritan's Purse`,
   };
@@ -224,7 +230,7 @@ export function buildArrivalConfirmation(args: {
     channel: 'sms',
     to: args.phone,
     toName: args.name,
-    body: `OCC: Welcome, ${args.name.split(' ')[0]}! You're checked in at ${args.locationName}. Find a team lead in a red shirt for your assignment. — Samaritan's Purse`,
+    body: `OCC: Welcome, ${getFirstName(args.name)}! You're checked in at ${args.locationName}. Find a team lead in a red shirt for your assignment. — Samaritan's Purse`,
   };
 }
 
@@ -244,7 +250,7 @@ export function buildReminder(args: {
   kind: ReminderKind;
   channel: 'email' | 'sms';
 }): Omit<OutboxMessage, 'id' | 'sentAt' | 'status'> {
-  const firstName = args.name.split(' ')[0];
+  const firstName = getFirstName(args.name);
   const subjectByKind: Record<ReminderKind, string> = {
     t7: 'One week to Collection Week — Operation Christmas Child',
     t1: 'Tomorrow: your Collection Week shift',
@@ -335,7 +341,10 @@ export function planReminders(args: {
   now?: Date;
 }): ReminderPlan[] {
   const now = (args.now ?? new Date()).getTime();
-  const startTs = new Date(`${args.collectionWeekStart}T00:00:00Z`).getTime();
+  // Parse Collection Week start as LOCAL time (not UTC). Collection Week is
+  // wall-clock time in the volunteer\'s region — using UTC produced reminders
+  // up to 8 hours off in California, 12+ hours off in Hawaii. Audit P1.8.
+  const startTs = new Date(`${args.collectionWeekStart}T00:00:00`).getTime();
   const daysUntilStart = (startTs - now) / (24 * 60 * 60 * 1000);
   const plans: ReminderPlan[] = [];
   for (const s of args.signups) {

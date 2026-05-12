@@ -59,10 +59,20 @@ export default function Layout({ children, hideNav, noIdleLock }: LayoutProps) {
 
   return (
     <div className="min-h-[100dvh] flex flex-col bg-dotted-grid">
+      {/* Skip-to-main link — first focusable element on the page. Lets
+          keyboard users (and screen-reader users) bypass the navbar on
+          every page load instead of tabbing through 5-7 menu items. */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[100] focus:bg-sp-red focus:text-white focus:px-4 focus:py-2 focus:rounded-md focus:shadow-card focus:font-semibold"
+      >
+        Skip to main content
+      </a>
       <ModeBanner />
       {!hideNav && <Navbar title={title} />}
       <AnimatePresence mode="wait">
         <motion.main
+          id="main-content"
           key={location.pathname}
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}

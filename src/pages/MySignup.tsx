@@ -20,6 +20,7 @@ import {
   resetTokenFailures,
 } from '@/lib/security';
 import type { ShirtSize, StoredSignup } from '@/data/mockData';
+import { getFirstName } from '@/lib/name';
 import {
   DEFAULT_CDO_ID,
   defaultTokenExpiry,
@@ -55,10 +56,16 @@ export default function MySignup() {
 
   // Find the signup by token. O(n) is fine — even a large CDO won't
   // exceed ~200 signups in a season.
-  const signup = useMemo(
-    () => signups.find((s) => s.editToken && s.editToken === token),
-    [signups, token],
-  );
+  const signup = useMemo(() => {
+    // Validate token format BEFORE doing the lookup. crypto.randomUUID
+    // produces 36-char strings (e.g. "a1b2c3d4-1234-..."); our legacy
+    // fallback uses "tok_<ts>_<rand>" format. Anything outside these
+    // shapes is rejected — a bogus URL paste ("<script>...") never even
+    // reaches the matcher. Audit P2.11.
+    const TOKEN_OK = /^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|tok_[0-9a-z_]{12,32})$/i;
+    if (!TOKEN_OK.test(token)) return undefined;
+    return signups.find((s) => s.editToken && s.editToken === token);
+  }, [signups, token]);
 
   // Live-editing local draft. Init from the matched signup or empty if no match.
   const [draft, setDraft] = useState(() =>
@@ -234,7 +241,7 @@ export default function MySignup() {
               {t('mysignup.kicker')}
             </p>
             <h1 className="font-display text-3xl sm:text-4xl text-ink leading-[1.05] tracking-tight">
-              {t('mysignup.welcome', { name: signup.name ? `, ${signup.name.split(' ')[0]}` : '' })}
+              {t('mysignup.welcome', { name: signup.name ? `, ${getFirstName(signup.name)}` : '' })}
               <span className="font-display-italic block text-occ-green mt-1">
                 {t('mysignup.subtitle')}
               </span>
@@ -483,11 +490,22 @@ function InvalidLinkPage({ reason }: { reason: 'no-token' | 'not-found' | 'expir
 
   async function resendLink() {
     setError(null);
+    // Rate limit: at most 1 resend per 30s per browser. Without this an
+    // attacker who finds /my-signup could flood any known email by spamming
+    // this form. Audit P1.31.
+    const RESEND_KEY = 'occ:last-resend-ts';
+    const last = parseInt(window.localStorage.getItem(RESEND_KEY) ?? '0', 10);
+    const elapsed = (Date.now() - last) / 1000;
+    if (Number.isFinite(elapsed) && elapsed < 30) {
+      setError(`Please wait ${Math.ceil(30 - elapsed)}s before requesting another link.`);
+      return;
+    }
     const normalized = email.trim().toLowerCase();
     if (!normalized || !normalized.includes('@')) {
       setError('Please enter the email you used at signup.');
       return;
     }
+    window.localStorage.setItem(RESEND_KEY, String(Date.now()));
     const match = signups.find((s) => s.email.trim().toLowerCase() === normalized);
     if (!match || !match.editToken) {
       // For privacy, we DON'T tell the user whether the email matches.
@@ -507,7 +525,7 @@ function InvalidLinkPage({ reason }: { reason: 'no-token' | 'not-found' | 'expir
       to: match.email,
       toName: match.name,
       subject: 'Your edit link — Operation Christmas Child',
-      body: `Hi ${match.name.split(' ')[0]},\n\nHere's your edit link for your Collection Week 2026 signup:\n\n${url}\n\nThis link is private — anyone with it can edit your signup.\n\nSamaritan's Purse · Operation Christmas Child`,
+      body: `Hi ${getFirstName(match.name)},\n\nHere's your edit link for your Collection Week 2026 signup:\n\n${url}\n\nThis link is private — anyone with it can edit your signup.\n\nSamaritan's Purse · Operation Christmas Child`,
       relatedTarget: `signup:${match.id}`,
     });
     setSent(true);

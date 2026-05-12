@@ -99,7 +99,7 @@ export default function Navbar({ title }: NavbarProps) {
           <button
             onClick={() => setNotifOpen(true)}
             className="touch-target flex items-center justify-center relative"
-            aria-label="Notifications"
+            aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications'}
           >
             <Bell className="w-5 h-5 text-navy" />
             {unreadCount > 0 && (
@@ -164,17 +164,22 @@ export default function Navbar({ title }: NavbarProps) {
               </div>
 
               <nav className="flex-1 overflow-y-auto py-2">
-                {navItems.map((item) => (
+                {navItems.map((item) => {
+                  const isActive = typeof window !== 'undefined' &&
+                    window.location.hash === `#${item.path}`;
+                  return (
                   <a
                     key={item.path}
                     href={`#${item.path}`}
                     onClick={() => setMenuOpen(false)}
+                    aria-current={isActive ? 'page' : undefined}
                     className="flex items-center gap-3 px-4 py-3 text-sm text-navy hover:bg-bg-primary transition-colors"
                   >
                     <span className="flex-1">{item.label}</span>
                     <ChevronRight className="w-4 h-4 text-slate-light" />
                   </a>
-                ))}
+                  );
+                })}
               </nav>
 
               {/* Demo Role Switcher */}

@@ -14,6 +14,7 @@ import {
   getLocationById,
 } from '@/data/mockData';
 import type { Volunteer, VolunteerRole } from '@/data/mockData';
+import { safeJsonParse } from '@/lib/safeJson';
 
 export default function Volunteers() {
   const { isRegionalAdmin } = useAuth();
@@ -24,7 +25,8 @@ export default function Volunteers() {
   // Read pre-week signups count from the public form's localStorage so the
   // CDO Leader sees pending signups without having to navigate away.
   const signupsRaw = typeof window !== 'undefined' ? window.localStorage.getItem('occ:signups') : null;
-  const pendingSignups = signupsRaw ? (JSON.parse(signupsRaw) as unknown[]).length : 0;
+  const parsed = safeJsonParse<unknown[]>(signupsRaw, []);
+  const pendingSignups = Array.isArray(parsed) ? parsed.length : 0;
 
   // Show the demo CDO's team primarily. Real implementation would scope by
   // the signed-in user's CDO; for the prototype default to cdo1's roster.

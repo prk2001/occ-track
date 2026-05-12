@@ -1,3 +1,4 @@
+import { Navigate } from 'react-router';
 import { useAuth } from '@/hooks/useAuth';
 import { ROLE_CONFIG } from '@/data/mockData';
 import type { UserRole } from '@/data/mockData';
@@ -10,7 +11,11 @@ import GreeterDashboard from '@/components/dashboard/GreeterDashboard';
 
 export default function Dashboard() {
   const { user } = useAuth();
-  const role = user?.role || 'cdo_leader';
+  // Unauthenticated: route to /login (audit P0.4 + P0.12).
+  // The previous behavior fell back to a CDO Leader dashboard which silently
+  // exposed roster data with no login gate.
+  if (!user) return <Navigate to="/login" replace />;
+  const role = user.role;
 
   const renderDashboard = (r: UserRole) => {
     switch (r) {

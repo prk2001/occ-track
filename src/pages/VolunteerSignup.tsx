@@ -38,9 +38,11 @@ import {
   stampSignupThrottle,
 } from '@/lib/security';
 import TurnstileStub from '@/components/TurnstileStub';
+import { safeJsonParse } from '@/lib/safeJson';
 import { TrustStrip, ChristmasPattern } from '@/components/BrandFlair';
 import { useTranslation } from '@/lib/i18n';
 import LanguageToggle from '@/components/LanguageToggle';
+import { getFirstName } from '@/lib/name';
 
 // Note on roles: in real OCC practice, volunteers sign up just to *serve* —
 // the Central Drop-off Leader assigns specific roles (Greeter, Counter,
@@ -326,9 +328,9 @@ function IntroStep({ onStart }: { onStart: () => void }) {
   // exactly what the CDO has set up. Falls back to defaults if the admin
   // hasn't customized anything yet.
   const dayTimesRaw = typeof window !== 'undefined' ? window.localStorage.getItem('occ:day-times') : null;
-  const dayTimes: Record<string, string> = dayTimesRaw ? JSON.parse(dayTimesRaw) : DEFAULT_DAY_TIMES;
+  const dayTimes = safeJsonParse<Record<string, string>>(dayTimesRaw, DEFAULT_DAY_TIMES);
   const blocksRaw = typeof window !== 'undefined' ? window.localStorage.getItem('occ:day-blocks') : null;
-  const blocks: DayBlock[] = blocksRaw ? JSON.parse(blocksRaw) : [];
+  const blocks = safeJsonParse<DayBlock[]>(blocksRaw, []);
   const blocksByDate = new Map(blocks.map((b) => [b.date, b]));
   const openCount = COLLECTION_DAYS.filter((d) => !blocksByDate.has(d.date)).length;
 
@@ -540,8 +542,11 @@ function DetailsStep({
       <div className="bg-bg-card rounded-2xl shadow-card border border-border-custom p-5 space-y-5">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-ink-light mb-2">{t('signup.details.firstTime')}</p>
-          <div className="grid grid-cols-2 gap-2 p-1 bg-bg-primary rounded-xl">
+          <div className="grid grid-cols-2 gap-2 p-1 bg-bg-primary rounded-xl" role="radiogroup" aria-label="First-time volunteer status">
             <button
+              type="button"
+              role="radio"
+              aria-checked={draft.firstTime === true}
               onClick={() => onPatch({ firstTime: true })}
               className={`px-3 py-2 rounded-lg text-sm font-semibold transition-all ${
                 draft.firstTime === true ? 'bg-bg-card shadow-card text-ink' : 'text-ink-light'
@@ -550,6 +555,9 @@ function DetailsStep({
               {t('signup.details.firstTime.yes')}
             </button>
             <button
+              type="button"
+              role="radio"
+              aria-checked={draft.firstTime === false}
               onClick={() => onPatch({ firstTime: false })}
               className={`px-3 py-2 rounded-lg text-sm font-semibold transition-all ${
                 draft.firstTime === false ? 'bg-bg-card shadow-card text-ink' : 'text-ink-light'
@@ -568,6 +576,9 @@ function DetailsStep({
             {(['S', 'M', 'L', 'XL', 'XXL'] as ShirtSize[]).map((sz) => (
               <button
                 key={sz}
+                type="button"
+                aria-pressed={draft.shirtSize === sz}
+                aria-label={`T-shirt size ${sz}`}
                 onClick={() => onPatch({ shirtSize: draft.shirtSize === sz ? '' : sz })}
                 className={`h-10 rounded-lg text-xs font-bold transition-all border ${
                   draft.shirtSize === sz
@@ -669,7 +680,7 @@ function DetailsStep({
 // ─── Done ────────────────────────────────────────────────────────────────────
 function DoneStep({ signup, onAnother }: { signup?: StoredSignup; onAnother: () => void }) {
   const { t } = useTranslation();
-  const firstName = signup?.name ? signup.name.split(' ')[0] : '';
+  const firstName = signup?.name ? getFirstName(signup.name) : '';
   return (
     <motion.section
       initial={{ opacity: 0, y: 12 }}
@@ -798,8 +809,7 @@ function DuplicateWarning({ draft }: { draft: SignupDraft }) {
           We already have a signup with this {existing.email === draft.email ? 'email' : 'phone'}.
         </p>
         <p className="text-xs text-ink-light italic mt-1 leading-relaxed">
-          <strong className="text-ink not-italic">{existing.name}</strong> signed up via this contact info. If
-          that&apos;s you, use your edit link instead of submitting again — search your
+          If that&apos;s you, use your edit link instead of submitting again — search your
           inbox for &quot;Operation Christmas Child.&quot; Multiple family members sharing one
           email? Just submit; we&apos;ll dedupe later.
         </p>

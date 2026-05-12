@@ -1,8 +1,9 @@
 # OCC Track — Master TODO
 
-**Last audit:** Phase 30 complete — testing infrastructure (Vitest + RTL +
-Playwright + GitHub Actions CI). 116 tests across 14 files, all green.
-Source at `https://github.com/prk2001/occ-track`.
+**Last audit:** Phase 31 complete — addressed the external audit's
+fast fixes + critical P0 + key P1 items. 139 tests across 16 files,
+all green. Initial bundle dropped from 358 KB → 292 KB gzipped via
+route code-splitting. Source at `https://github.com/prk2001/occ-track`.
 
 This document inventories everything the prototype already has, then maps
 every remaining gap a real Samaritan's Purse / Operation Christmas Child
@@ -20,9 +21,10 @@ engineer-week of focused work; priorities reflect what blocks production.
 | Lib + hooks | 14 |
 | TypeScript LOC | ~12,200 |
 | Commits since Phase 14 | 15 |
-| Tests | **116** (113 unit/component + 3 E2E) |
+| Tests | **139** (113 → 136 unit/component + 3 E2E) |
 | Real backend | **0** (everything is localStorage) |
 | Public GitHub URL | https://github.com/prk2001/occ-track |
+| Initial bundle (gzipped) | **292 KB** (down from 358 KB via code-splitting in Phase 31) |
 | Spanish coverage | **Complete** for all public surfaces (Phase 29) |
 | CI | GitHub Actions: tsc + vitest + Playwright on every PR (Phase 30) |
 
@@ -86,6 +88,58 @@ engineer-week of focused work; priorities reflect what blocks production.
 ---
 
 ## Recent completions (since the last TODO refresh)
+
+- **Phase 31 — External audit fixes (143-item review).** Closed every
+  fast-fix + most P0/P1 items the auditor flagged:
+    - **Real bugs fixed:** SMS confirmations were sending to email
+      addresses (outbox.ts:122); exhaustive switches threw on unknown
+      enum values; audit log was using `reset_day_times` action for
+      mode flips; 3 JSON.parse calls crashed on corrupted data; emoji
+      in alert subject lines.
+    - **P0.4 / P0.12: Default user is now null.** App boots to /login
+      role-picker instead of auto-elevating to Super Admin.
+    - **P0.3: Error boundary** added at App root with friendly fallback
+      (refresh + back-to-home buttons). Crash anywhere = friendly recovery
+      page, not white screen.
+    - **P0.5: 8 silent catches** now log via console.error so data
+      corruption + storage failures are diagnosable.
+    - **P0.6: Skip-to-main link** as the first focusable element on
+      every page. Keyboard users no longer tab through 7 nav items.
+    - **P0.9: aria-pressed/aria-checked + role=radiogroup** on
+      first-time toggle and shirt-size grid in signup wizard.
+    - **P0.10 + P1.14: aria-live regions + role="alertdialog"** on
+      Welcome Table check-in confirmation + LockOverlay.
+    - **P0.8: useReducedMotion hook** for Framer Motion components to
+      respect prefers-reduced-motion.
+    - **P1.1: SMS→phone bug fixed**, buildSignupConfirmation now
+      accepts phone, SMS branch routes to it correctly.
+    - **P1.5: generateId() utility** using crypto.getRandomValues
+      replacing Math.random fallback. New src/lib/id.ts.
+    - **P1.7: getFirstName() utility** + getInitials() in src/lib/name.ts.
+      Handles honorifics (Dr., Sra., Rev.) and Hispanic compound names
+      ("María José"). 12 .split() call sites updated.
+    - **P1.8: Timezone bug** in planReminders fixed — was UTC midnight,
+      now local time matching wall-clock Collection Week.
+    - **P1.12: aria-current=page** on Navbar nav items.
+    - **P1.20: Route code-splitting** via React.lazy for 17 admin routes.
+      Initial bundle dropped 358 KB → 292 KB gzipped (-18%). Admin
+      routes load on demand (CheckIn = 6.6 KB, Signups = 17 KB, etc.).
+    - **P1.30: CSV formula injection** defused — values starting with
+      `= + - @ TAB CR` are now prefixed with apostrophe in CSV export.
+    - **P1.31: Magic-link resend rate limited** to 1 per 30s per
+      browser (was unlimited; attacker could flood victim's email).
+    - **P1.32: Duplicate-signup warning** no longer leaks the existing
+      volunteer's name (was an email/phone enumeration vector).
+    - **P2.1: FIFO truncation warnings** via console.warn on
+      auditLog + outbox writes that overflow the cap.
+    - **P2.11: Magic link token format validation** before lookup —
+      regex rejects bogus URL pastes before they touch the matcher.
+    - **P2.27: Navbar notification bell aria-label** now includes
+      the unread count.
+    - **safeJsonParse() helper** wrapping the 3 fragile JSON.parse
+      call sites.
+    - **+25 new tests** for the 3 new utility modules (getFirstName,
+      safeJson, generateId).
 
 - **Phase 30 — Testing infrastructure.** Vitest + RTL + Playwright + GitHub
   Actions CI all wired. 116 tests across 14 files, all green:

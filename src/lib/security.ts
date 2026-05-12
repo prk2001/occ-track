@@ -140,7 +140,8 @@ export function stampSignupThrottle(): void {
   if (typeof window === 'undefined') return;
   try {
     window.localStorage.setItem(SIGNUP_THROTTLE_KEY, String(Date.now()));
-  } catch {
+  } catch (e) {
+    console.error('[OCC security]', e);
     // Throttle writes are best-effort.
   }
 }
@@ -167,7 +168,8 @@ function writeTokenAttempts(a: TokenAttempts): void {
   if (typeof window === 'undefined') return;
   try {
     window.localStorage.setItem(TOKEN_ATTEMPTS_KEY, JSON.stringify(a));
-  } catch {
+  } catch (e) {
+    console.error('[OCC security]', e);
     // best-effort
   }
 }

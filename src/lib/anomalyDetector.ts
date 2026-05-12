@@ -100,7 +100,8 @@ function writeState(s: AnomalyState): void {
   if (typeof window === 'undefined') return;
   try {
     window.localStorage.setItem(ANOMALY_STATE_KEY, JSON.stringify(s));
-  } catch {
+  } catch (e) {
+    console.error('[OCC anomalyDetector]', e);
     // best-effort
   }
 }
@@ -212,7 +213,9 @@ function dispatchAlert(
 }
 
 function humanKind(kind: SecuritySignalKind): string {
-  return {
+  // Record<…> + ?? fallback handles new SecuritySignalKind variants
+  // gracefully (won\'t throw on legacy stored data after enum widens).
+  const labels: Record<SecuritySignalKind, string> = {
     honeypot_filled: 'Honeypot trip',
     submit_too_fast: 'Too-fast submit',
     signup_throttled: 'Signup throttle',
@@ -220,11 +223,14 @@ function humanKind(kind: SecuritySignalKind): string {
     token_bruteforce_lockout: 'Magic-link brute-force',
     pii_reveal: 'PII reveal',
     pii_blur_restored: 'PII re-hidden',
-  }[kind];
+  };
+  return labels[kind] ?? `Unknown (${String(kind)})`;
 }
 
 function severityLabel(s: 'low' | 'medium' | 'high'): string {
-  return s === 'high' ? '🚨 CRITICAL' : s === 'medium' ? '⚠ Warning' : 'ℹ Notice';
+  // Plain text — emoji vary by font/OS and don\'t play well with email subject lines.
+  // The Security Center UI adds visual severity tones via CSS classes.
+  return s === 'high' ? 'CRITICAL' : s === 'medium' ? 'Warning' : 'Notice';
 }
 
 // Background scanner — runs scanForAnomalies every 60s. Returns a cleanup
@@ -263,8 +269,13 @@ export function getCooldownStatus(): Array<{ kind: SecuritySignalKind; cooldownS
   const state = readState();
   const now = Date.now();
   const out: Array<{ kind: SecuritySignalKind; cooldownSecondsRemaining: number }> = [];
+  const validKinds: ReadonlyArray<SecuritySignalKind> = [
+    'honeypot_filled', 'submit_too_fast', 'signup_throttled',
+    'invalid_token', 'token_bruteforce_lockout', 'pii_reveal', 'pii_blur_restored',
+  ];
   for (const [kind, ts] of Object.entries(state.lastAlertedAt)) {
     if (!ts) continue;
+    if (!validKinds.includes(kind as SecuritySignalKind)) continue; // skip stale enum values
     const sinceLast = now - new Date(ts).getTime();
     const remaining = ALERT_COOLDOWN_MS - sinceLast;
     if (remaining > 0) {

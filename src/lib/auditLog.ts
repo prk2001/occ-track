@@ -26,6 +26,7 @@ export type AuditAction =
   | 'clear_all_signups'
   | 'edit_day_time'
   | 'reset_day_times'
+  | 'switch_app_mode'
   | 'block_day'
   | 'reopen_day'
   | 'remove_signup'
@@ -79,9 +80,14 @@ export function logAuditEvent(
     };
     // Newest first; FIFO-evict the oldest if we'd exceed the cap.
     const next = [event, ...existing].slice(0, AUDIT_LOG_CAP);
+    if (existing.length + 1 > AUDIT_LOG_CAP) {
+      console.warn(`[OCC audit-log] FIFO truncation: dropped ${existing.length + 1 - AUDIT_LOG_CAP} oldest event(s). Increase AUDIT_LOG_CAP or persist to backend immutable store.`);
+    }
     window.localStorage.setItem(AUDIT_LOG_KEY, JSON.stringify(next));
-  } catch {
-    // Audit writes must never break the user flow — silent failure is OK.
+  } catch (e) {
+    // Audit writes must never break the user flow — but DO surface the
+    // failure to the console so a security-conscious operator notices.
+    console.error('[OCC audit-log] write failed:', e);
   }
 }
 
@@ -156,6 +162,7 @@ export function getActionLabel(action: AuditAction): { label: string; tone: 'vie
     case 'clear_all_signups':       return { label: 'Cleared all signups', tone: 'destructive' };
     case 'edit_day_time':           return { label: 'Edited shift hours', tone: 'edit' };
     case 'reset_day_times':         return { label: 'Reset shift hours', tone: 'edit' };
+    case 'switch_app_mode':         return { label: 'Switched app mode', tone: 'edit' };
     case 'block_day':               return { label: 'Blocked a day', tone: 'edit' };
     case 'reopen_day':              return { label: 'Reopened a day', tone: 'edit' };
     case 'remove_signup':           return { label: 'Removed signup', tone: 'destructive' };
@@ -163,5 +170,9 @@ export function getActionLabel(action: AuditAction): { label: string; tone: 'vie
     case 'volunteer_signup_created':return { label: 'New volunteer signed up', tone: 'create' };
     case 'mark_arrived':            return { label: 'Marked volunteer arrived', tone: 'create' };
     case 'unmark_arrived':          return { label: 'Unmarked arrival', tone: 'edit' };
+    // Forward-compat fallback for any AuditAction added after this build:
+    // unrecognized actions render as themselves with neutral tone so the
+    // audit log keeps working through schema migrations.
+    default: return { label: action, tone: 'view' };
   }
 }

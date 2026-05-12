@@ -2,6 +2,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Lock, ShieldCheck } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { ROLE_CONFIG } from '@/data/mockData';
+import { getFirstName } from '@/lib/name';
 
 /**
  * Lock overlay — shown on top of any private page when useIdleLock
@@ -32,6 +33,8 @@ export default function LockOverlay({
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 20 }}
           className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-gold-light border border-gold rounded-2xl shadow-card-elevated px-5 py-3 max-w-md"
+          role="status"
+          aria-live="polite"
         >
           <div className="flex items-center gap-3 text-sm">
             <Lock className="w-4 h-4 text-gold shrink-0" />
@@ -53,6 +56,10 @@ export default function LockOverlay({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           className="fixed inset-0 z-[100] backdrop-blur-md bg-navy/40 flex items-center justify-center px-4"
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby="lock-overlay-title"
+          aria-describedby="lock-overlay-desc"
         >
           <motion.div
             initial={{ scale: 0.92, opacity: 0 }}
@@ -67,13 +74,13 @@ export default function LockOverlay({
             <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-sp-red mb-2">
               Session Locked
             </p>
-            <h1 className="font-display text-3xl text-ink leading-tight tracking-tight">
+            <h1 id="lock-overlay-title" className="font-display text-3xl text-ink leading-tight tracking-tight">
               Welcome back.
               <span className="font-display-italic block text-sp-red mt-1">
                 Confirm it's still you.
               </span>
             </h1>
-            <p className="text-sm text-ink-light italic mt-3 leading-relaxed">
+            <p id="lock-overlay-desc" className="text-sm text-ink-light italic mt-3 leading-relaxed">
               For volunteer privacy, this session locked itself after a few
               minutes of inactivity. Tap below to continue with the same role.
             </p>
@@ -91,7 +98,7 @@ export default function LockOverlay({
               className="w-full h-12 mt-6 bg-sp-red text-white font-semibold rounded-2xl hover:bg-sp-red-dark transition-colors flex items-center justify-center gap-2"
             >
               <ShieldCheck className="w-4 h-4" />
-              Continue as {user?.name?.split(' ')[0] ?? 'me'}
+              Continue as {user ? getFirstName(user.name) : 'me'}
             </button>
             <p className="text-[10px] text-ink-light/60 italic mt-4">
               Not you? Use the role switcher in the menu to switch accounts.
