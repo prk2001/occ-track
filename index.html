@@ -4,6 +4,74 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta name="theme-color" content="#1B5E20" />
+
+    <!-- ========================================================== -->
+    <!-- SECURITY HEADERS (meta-tag fallback) ====================== -->
+    <!-- Real production deploys serve these as HTTP response headers
+         via netlify.toml / vercel.json (preferred — HTTP-header CSP
+         is stricter than meta-tag CSP because it covers redirects).
+         These meta tags are belt-and-suspenders for environments that
+         don't honor the deployment config (local dev, static file
+         servers, etc.). ============================================ -->
+
+    <!-- Content Security Policy: tight allowlist of where scripts,
+         styles, fonts, images can load from. strict-dynamic lets the
+         trusted bootstrap script propagate trust to dynamically-injected
+         scripts (Vite's module loader); 'unsafe-inline' is a fallback
+         ignored by browsers that support strict-dynamic.
+         Google Fonts is whitelisted for the DM Sans + Geist typefaces.
+         data: URIs allowed for images so the print badges can inline
+         the OCC mark. ============================================== -->
+    <meta http-equiv="Content-Security-Policy" content="
+      default-src 'self';
+      script-src 'self' 'strict-dynamic' 'unsafe-inline';
+      style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+      font-src 'self' https://fonts.gstatic.com data:;
+      img-src 'self' data: blob:;
+      connect-src 'self';
+      frame-ancestors 'none';
+      base-uri 'self';
+      form-action 'self';
+      object-src 'none';
+      upgrade-insecure-requests;
+    " />
+
+    <!-- Belt: deny embedding (clickjacking defense). Modern browsers
+         honor frame-ancestors above, but X-Frame-Options is the legacy
+         signal still respected by older WAFs. ====================== -->
+    <meta http-equiv="X-Frame-Options" content="DENY" />
+
+    <!-- Prevent MIME-type sniffing — keep the browser from "guessing"
+         a JSON response is HTML. ================================== -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+
+    <!-- Referrer policy: don't leak full URLs (which contain tokens
+         like /my-signup?token=...) when navigating to external sites.
+         strict-origin-when-cross-origin sends only origin, not path. -->
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+
+    <!-- Permissions-Policy: explicitly deny APIs the app never uses.
+         Reduces attack surface AND fingerprinting surface. The "()"
+         empty allowlist means "no origin can use this." ============ -->
+    <meta http-equiv="Permissions-Policy" content="
+      camera=(),
+      microphone=(),
+      geolocation=(),
+      payment=(),
+      usb=(),
+      magnetometer=(),
+      gyroscope=(),
+      accelerometer=(),
+      interest-cohort=()
+    " />
+
+    <!-- Don't index login/admin routes (each private page also sets
+         this dynamically via useNoIndex, this is the global default). -->
+    <meta name="robots" content="index,follow" />
+    <!-- Children's safety: declare the rating so kid-safe search engines
+         (Google SafeSearch, Bing Family Mode, OpenDNS Family Shield)
+         don't filter it out. ====================================== -->
+    <meta name="rating" content="general" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="OCC Track" />

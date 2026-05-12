@@ -1,5 +1,7 @@
+import { useEffect } from 'react';
 import { Routes, Route } from 'react-router';
 import { AuthProvider } from '@/hooks/useAuth';
+import { startTamperWatcher } from '@/lib/tamperDetection';
 import Dashboard from '@/pages/Dashboard';
 import Login from '@/pages/Login';
 import CheckIn from '@/pages/CheckIn';
@@ -24,6 +26,12 @@ import Settings from '@/pages/Settings';
 import NotFound from '@/pages/NotFound';
 
 export default function App() {
+  // Background tamper-detection watcher: runs auditAllProtectedKeys() every
+  // 30 seconds + once on mount. Fires a security signal on any mismatch.
+  useEffect(() => {
+    const stop = startTamperWatcher();
+    return stop;
+  }, []);
   return (
     <AuthProvider>
       <Routes>

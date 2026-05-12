@@ -16,6 +16,8 @@ import type { StoredSignup } from '@/data/mockData';
 import { logAuditEvent } from '@/lib/auditLog';
 import { buildArrivalConfirmation, sendMessage } from '@/lib/outbox';
 import { useNoIndex } from '@/hooks/useNoIndex';
+import KioskPinGate from '@/components/KioskPinGate';
+import { useNavigate } from 'react-router';
 
 /**
  * Welcome Table — fullscreen kiosk for a tablet at the front door.
@@ -34,6 +36,7 @@ import { useNoIndex } from '@/hooks/useNoIndex';
  */
 export default function WelcomeTable() {
   useNoIndex();
+  const navigate = useNavigate();
   const [params] = useSearchParams();
   const locationId = params.get('loc') || DEFAULT_CDO_ID;
   const location = getLocationById(locationId);
@@ -100,6 +103,7 @@ export default function WelcomeTable() {
   void tick;
 
   return (
+    <KioskPinGate onExit={() => navigate('/signups')}>
     <div className="fixed inset-0 bg-bg-cream overflow-hidden flex flex-col">
       {/* Top bar — minimal: logo + location + exit. No navbar. */}
       <header className="shrink-0 bg-bg-card border-b border-border-custom px-8 py-5 flex items-center justify-between">
@@ -253,6 +257,7 @@ export default function WelcomeTable() {
         )}
       </AnimatePresence>
     </div>
+    </KioskPinGate>
   );
 }
 

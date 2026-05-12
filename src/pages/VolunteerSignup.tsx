@@ -37,6 +37,7 @@ import {
   MIN_FILL_SECONDS,
   stampSignupThrottle,
 } from '@/lib/security';
+import TurnstileStub from '@/components/TurnstileStub';
 
 // Note on roles: in real OCC practice, volunteers sign up just to *serve* —
 // the Central Drop-off Leader assigns specific roles (Greeter, Counter,
@@ -92,6 +93,7 @@ export default function VolunteerSignup() {
   // None of these substitute for server-side rate limits + CAPTCHA in prod.
   const [honeypot, setHoneypot] = useState('');
   const [submitBlocked, setSubmitBlocked] = useState<string | null>(null);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const mountedAt = useRef<number>(Date.now());
   useEffect(() => {
     mountedAt.current = Date.now();
@@ -124,6 +126,12 @@ export default function VolunteerSignup() {
     if (throttleRemaining !== null) {
       logSecuritySignal('signup_throttled', `wait=${throttleRemaining}s`);
       setSubmitBlocked(`Please wait ${throttleRemaining}s before submitting again.`);
+      return;
+    }
+    // CAPTCHA gate — production wires this to Cloudflare Turnstile server
+    // verification. Prototype: any non-empty token from the stub passes.
+    if (!captchaToken) {
+      setSubmitBlocked('Please complete the human verification first.');
       return;
     }
 
@@ -263,6 +271,8 @@ export default function VolunteerSignup() {
                 honeypot={honeypot}
                 onHoneypotChange={setHoneypot}
                 submitBlocked={submitBlocked}
+                captchaToken={captchaToken}
+                onCaptchaVerified={setCaptchaToken}
               />
             )}
             {step === 'done' && (
@@ -499,6 +509,7 @@ function ContactStep({
 function DetailsStep({
   draft, onPatch, onBack, onSubmit, ok,
   honeypot, onHoneypotChange, submitBlocked,
+  captchaToken, onCaptchaVerified,
 }: {
   draft: SignupDraft;
   onPatch: (p: Partial<SignupDraft>) => void;
@@ -508,6 +519,8 @@ function DetailsStep({
   honeypot: string;
   onHoneypotChange: (v: string) => void;
   submitBlocked: string | null;
+  captchaToken: string | null;
+  onCaptchaVerified: (token: string) => void;
 }) {
   return (
     <StepShell title="Almost done." italic="A few quick details to plan the week." onBack={onBack}>
@@ -608,6 +621,11 @@ function DetailsStep({
           <p className="text-sm text-ink leading-relaxed">{submitBlocked}</p>
         </div>
       )}
+
+      <TurnstileStub
+        onVerified={onCaptchaVerified}
+        verifiedToken={captchaToken}
+      />
 
       <DuplicateWarning draft={draft} />
 

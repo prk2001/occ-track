@@ -4,6 +4,9 @@ import type { ReactNode } from 'react';
 import Navbar from './Navbar';
 import BottomNav from './BottomNav';
 import Footer from './Footer';
+import LockOverlay from './LockOverlay';
+import { useIdleLock } from '@/hooks/useIdleLock';
+import { useAuth } from '@/hooks/useAuth';
 
 const PAGE_TITLES: Record<string, string> = {
   '/': 'Dashboard',
@@ -26,11 +29,32 @@ const PAGE_TITLES: Record<string, string> = {
 interface LayoutProps {
   children: ReactNode;
   hideNav?: boolean;
+  /** Disable idle lock — for public pages that shouldn't time out. */
+  noIdleLock?: boolean;
 }
 
-export default function Layout({ children, hideNav }: LayoutProps) {
+// Routes considered "private enough" to enable the idle auto-lock.
+// Public routes (signup, my-signup magic-link, welcome-table kiosk) opt out
+// because they're either single-purpose forms or self-service devices.
+const PRIVATE_ROUTES = [
+  '/', '/checkin', '/dropoffs', '/totals', '/cartons', '/summary', '/loading',
+  '/live', '/volunteers', '/signups', '/states', '/settings',
+  '/audit-log', '/outbox', '/security', '/badges',
+];
+
+export default function Layout({ children, hideNav, noIdleLock }: LayoutProps) {
   const location = useLocation();
+  const { isAuthenticated } = useAuth();
   const title = PAGE_TITLES[location.pathname] || 'OCC Track';
+
+  // Idle lock applies when:
+  //   - The route is private (admin/leadership pages)
+  //   - User is authenticated (no idle lock on the login screen)
+  //   - Not explicitly disabled (Welcome Table kiosk, etc.)
+  // Public signup form, magic-link self-service, and kiosk pages opt out.
+  const idleLockActive =
+    !noIdleLock && isAuthenticated && PRIVATE_ROUTES.includes(location.pathname);
+  const { locked, warning, dismissLock } = useIdleLock({ disabled: !idleLockActive });
 
   return (
     <div className="min-h-[100dvh] flex flex-col bg-dotted-grid">
@@ -49,6 +73,9 @@ export default function Layout({ children, hideNav }: LayoutProps) {
       </AnimatePresence>
       <Footer />
       {!hideNav && <BottomNav />}
+      {idleLockActive && (
+        <LockOverlay visible={locked} warning={warning} onUnlock={dismissLock} />
+      )}
     </div>
   );
 }

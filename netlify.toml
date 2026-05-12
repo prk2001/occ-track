@@ -1,0 +1,77 @@
+# Netlify deployment configuration.
+#
+# Build: tsc -b && vite build → dist/
+# Publish dir: dist
+#
+# All security headers below are HTTP-level (stronger than meta-tag
+# CSP because they apply to redirects and non-HTML responses). The
+# meta-tag equivalents in index.html are belt-and-suspenders for
+# environments that don't honor this file.
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# SPA fallback — HashRouter doesn't need this, but if we ever migrate
+# to BrowserRouter it's pre-wired.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# ── Security headers (apply to every response) ──────────────────────────
+[[headers]]
+  for = "/*"
+  [headers.values]
+    # CSP: tight allowlist. See index.html meta for line-by-line rationale.
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'strict-dynamic' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests"
+    # HSTS: 2-year max-age, include subdomains, preload-list ready.
+    # ONLY enable preload after confirming HTTPS works for ALL subdomains.
+    Strict-Transport-Security = "max-age=63072000; includeSubDomains; preload"
+    # Clickjacking defense (legacy + modern).
+    X-Frame-Options = "DENY"
+    # MIME sniffing off.
+    X-Content-Type-Options = "nosniff"
+    # Referrer policy — protect URL paths (which carry magic link tokens).
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    # Permissions-Policy — deny everything the app doesn't need.
+    Permissions-Policy = "camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=(), interest-cohort=()"
+    # COOP/COEP/CORP — isolate the origin from other sites in the
+    # browser's memory model. Prevents Spectre-style cross-origin reads.
+    Cross-Origin-Opener-Policy = "same-origin"
+    Cross-Origin-Embedder-Policy = "require-corp"
+    Cross-Origin-Resource-Policy = "same-origin"
+    # Legacy XSS protection header (deprecated but still honored by IE/old WAFs).
+    X-XSS-Protection = "0"
+
+# Private routes — even stricter caching to prevent stale PII in proxies.
+[[headers]]
+  for = "/signups*"
+  [headers.values]
+    Cache-Control = "no-store, no-cache, must-revalidate, private"
+[[headers]]
+  for = "/audit-log*"
+  [headers.values]
+    Cache-Control = "no-store, no-cache, must-revalidate, private"
+[[headers]]
+  for = "/outbox*"
+  [headers.values]
+    Cache-Control = "no-store, no-cache, must-revalidate, private"
+[[headers]]
+  for = "/security*"
+  [headers.values]
+    Cache-Control = "no-store, no-cache, must-revalidate, private"
+[[headers]]
+  for = "/my-signup*"
+  [headers.values]
+    Cache-Control = "no-store, no-cache, must-revalidate, private"
+[[headers]]
+  for = "/badges*"
+  [headers.values]
+    Cache-Control = "no-store, no-cache, must-revalidate, private"
+
+# Static assets: long-cache (filenames are hashed by Vite).
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
