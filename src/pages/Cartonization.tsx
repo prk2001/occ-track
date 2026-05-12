@@ -13,6 +13,9 @@ import {
   getLocationById,
   timeAgo,
 } from '@/data/mockData';
+import { useAppMode } from '@/lib/appMode';
+import ModeLockedCard from '@/components/ModeLockedCard';
+import { logAuditEvent } from '@/lib/auditLog';
 import type { Carton } from '@/data/mockData';
 
 type CartonType = 'regular' | 'filler';
@@ -29,6 +32,7 @@ function newId() {
 }
 
 export default function Cartonization() {
+  const { isProduction } = useAppMode();
   const { user, isCDOLeader } = useAuth();
   const myCdoId = user?.locationId && getLocationById(user.locationId)?.type === 'central'
     ? user.locationId
@@ -64,6 +68,19 @@ export default function Cartonization() {
   }
 
   function addCarton(c: { boxCount: number; cartonType: CartonType; note?: string }) {
+    // Data-integrity gate: in production mode, carton entry is locked
+    // to protect real Collection Week tallies.
+    if (isProduction) {
+      if (user) {
+        logAuditEvent(
+          { id: user.id, name: user.name, role: user.role },
+          'clear_all_signups',
+          'cartonization',
+          `BLOCKED carton entry: ${c.boxCount} boxes (${c.cartonType}) — app in production mode`,
+        );
+      }
+      return;
+    }
     const locationId = myCdoId || 'cdo1';
     const carton: SessionCarton = {
       id: newId(),
@@ -85,6 +102,12 @@ export default function Cartonization() {
   return (
     <Layout>
       <div className="px-4 py-4 max-w-4xl mx-auto pb-24 space-y-5">
+        {isProduction && (
+          <ModeLockedCard
+            feature="Cartonization"
+            description="Production mode keeps real Collection Week carton tallies safe from test data. Switch to testing mode to pack sample cartons, then back to production before real Collection Week."
+          />
+        )}
         {/* Header */}
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">

@@ -5,6 +5,7 @@ import Navbar from './Navbar';
 import BottomNav from './BottomNav';
 import Footer from './Footer';
 import LockOverlay from './LockOverlay';
+import ModeBanner from './ModeBanner';
 import { useIdleLock } from '@/hooks/useIdleLock';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -58,6 +59,7 @@ export default function Layout({ children, hideNav, noIdleLock }: LayoutProps) {
 
   return (
     <div className="min-h-[100dvh] flex flex-col bg-dotted-grid">
+      <ModeBanner />
       {!hideNav && <Navbar title={title} />}
       <AnimatePresence mode="wait">
         <motion.main

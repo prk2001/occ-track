@@ -3,14 +3,17 @@ import { motion } from 'framer-motion';
 import {
   Settings as SettingsIcon, Bell, Lock, HelpCircle, ChevronRight, LogOut,
   User as UserIcon, MapPin, Volume2, Eye, Database, Pencil,
+  FlaskConical, ShieldCheck, AlertTriangle,
 } from 'lucide-react';
 import Layout from '@/components/Layout';
 import { useAuth } from '@/hooks/useAuth';
+import { useAppMode } from '@/lib/appMode';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { ROLE_CONFIG, getLocationById } from '@/data/mockData';
 
 export default function Settings() {
-  const { user, logout } = useAuth();
+  const { user, logout, isSuperAdmin } = useAuth();
+  const { mode, setMode, isTest, history } = useAppMode();
   const rc = user ? ROLE_CONFIG[user.role] : null;
   const myLocation = user?.locationId ? getLocationById(user.locationId) : null;
 
@@ -81,6 +84,141 @@ export default function Settings() {
                 </div>
               </div>
             )}
+          </motion.section>
+        )}
+
+        {/* App Mode — Super Admin only. THE critical data-integrity control. */}
+        {isSuperAdmin && (
+          <motion.section
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.05 }}
+            className="bg-bg-card rounded-2xl shadow-card border border-border-custom overflow-hidden"
+          >
+            <header className="px-5 py-4 border-b border-border-custom flex items-center gap-2">
+              <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${
+                isTest ? 'bg-gold-light' : 'bg-occ-green-light'
+              }`}>
+                {isTest ? (
+                  <FlaskConical className="w-5 h-5 text-gold" />
+                ) : (
+                  <ShieldCheck className="w-5 h-5 text-occ-green" />
+                )}
+              </div>
+              <div>
+                <h2 className="font-display text-base text-ink leading-tight">
+                  App Mode
+                </h2>
+                <p className="text-[11px] text-ink-light italic">
+                  Production locks shoebox + carton entry. Testing unlocks it for demos and training.
+                </p>
+              </div>
+            </header>
+            <div className="p-5 space-y-4">
+              {/* Mode selector */}
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => {
+                    if (mode === 'production') return;
+                    const reason = window.prompt('Why are you switching to PRODUCTION mode?\n\nThis enables real Collection Week tally protection.');
+                    setMode('production', user, reason ?? undefined);
+                  }}
+                  className={`relative p-4 rounded-2xl border-2 text-left transition-all ${
+                    mode === 'production'
+                      ? 'border-occ-green bg-occ-green-light'
+                      : 'border-border-custom bg-bg-primary hover:border-occ-green/40'
+                  }`}
+                >
+                  <ShieldCheck className={`w-5 h-5 mb-1.5 ${
+                    mode === 'production' ? 'text-occ-green' : 'text-ink-light'
+                  }`} />
+                  <p className={`font-display text-base ${
+                    mode === 'production' ? 'text-occ-green-dark' : 'text-ink'
+                  }`}>
+                    Production
+                  </p>
+                  <p className="text-[10px] text-ink-light italic mt-0.5 leading-relaxed">
+                    Shoebox + carton entry locked. Real Collection Week tallies safe.
+                  </p>
+                  {mode === 'production' && (
+                    <span className="absolute top-2 right-2 text-[9px] font-bold uppercase tracking-wider text-occ-green bg-occ-green-light/80 px-1.5 py-0.5 rounded">
+                      Active
+                    </span>
+                  )}
+                </button>
+                <button
+                  onClick={() => {
+                    if (mode === 'test') return;
+                    const confirmed = window.confirm(
+                      'Switch to TESTING MODE?\n\nIn testing mode, all shoebox + carton entry is unlocked. Data entered will NOT be counted toward real Collection Week totals, but a persistent banner will appear at the top of every page to remind staff. The switch itself will be logged with your name + timestamp.\n\nContinue?',
+                    );
+                    if (!confirmed) return;
+                    const reason = window.prompt('Why are you switching to TESTING MODE? (e.g. "Training new greeter", "QA demo")');
+                    setMode('test', user, reason ?? undefined);
+                  }}
+                  className={`relative p-4 rounded-2xl border-2 text-left transition-all ${
+                    mode === 'test'
+                      ? 'border-gold bg-gold-light'
+                      : 'border-border-custom bg-bg-primary hover:border-gold/40'
+                  }`}
+                >
+                  <FlaskConical className={`w-5 h-5 mb-1.5 ${
+                    mode === 'test' ? 'text-gold' : 'text-ink-light'
+                  }`} />
+                  <p className={`font-display text-base ${
+                    mode === 'test' ? 'text-gold' : 'text-ink'
+                  }`}>
+                    Testing
+                  </p>
+                  <p className="text-[10px] text-ink-light italic mt-0.5 leading-relaxed">
+                    Full read/write for training, QA, demos. Entries NOT counted.
+                  </p>
+                  {mode === 'test' && (
+                    <span className="absolute top-2 right-2 text-[9px] font-bold uppercase tracking-wider text-gold bg-white/80 px-1.5 py-0.5 rounded">
+                      Active
+                    </span>
+                  )}
+                </button>
+              </div>
+
+              {/* Warning callout for test mode */}
+              {isTest && (
+                <div className="bg-gold-light border border-gold rounded-xl p-3 flex items-start gap-2.5">
+                  <AlertTriangle className="w-4 h-4 text-gold shrink-0 mt-0.5" />
+                  <p className="text-xs text-ink leading-relaxed">
+                    Testing mode is ON. Switch back to production before real Collection Week
+                    begins or any data entered today will mingle with real tallies.
+                  </p>
+                </div>
+              )}
+
+              {/* Recent mode-change history */}
+              {history.length > 0 && (
+                <details className="pt-3 border-t border-border-custom/60">
+                  <summary className="text-[11px] font-bold uppercase tracking-wider text-ink-light cursor-pointer hover:text-ink">
+                    Mode-change ledger ({history.length} {history.length === 1 ? 'entry' : 'entries'})
+                  </summary>
+                  <ul className="mt-3 space-y-2 max-h-64 overflow-y-auto">
+                    {history.slice(0, 20).map((h) => (
+                      <li key={h.id} className="bg-bg-primary rounded-lg p-3 text-xs">
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <span className="font-semibold text-ink">
+                            {h.from.toUpperCase()} → {h.to.toUpperCase()}
+                          </span>
+                          <span className="text-[10px] text-ink-light tabular-nums">
+                            {new Date(h.timestamp).toLocaleString()}
+                          </span>
+                        </div>
+                        <p className="text-ink-light mt-1">
+                          by <span className="font-medium text-ink">{h.actorName}</span>
+                          {h.reason && <span className="italic"> · {h.reason}</span>}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              )}
+            </div>
           </motion.section>
         )}
 

@@ -8,6 +8,9 @@ import Layout from '@/components/Layout';
 import { useAuth } from '@/hooks/useAuth';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { SHOEBOX_ENTRIES, getLocationById, lookupZip, timeAgo } from '@/data/mockData';
+import { useAppMode } from '@/lib/appMode';
+import ModeLockedCard from '@/components/ModeLockedCard';
+import { logAuditEvent } from '@/lib/auditLog';
 
 type Step = 'list' | 'donor' | 'count' | 'confirm';
 type DonorType = 'individual' | 'organization';
@@ -47,6 +50,7 @@ function newId() {
 
 export default function CheckIn() {
   const { user } = useAuth();
+  const { isProduction } = useAppMode();
   const locationLabel = user?.locationId
     ? getLocationById(user.locationId)?.name ?? 'My Location'
     : 'OCC Drop-off';
@@ -114,6 +118,20 @@ export default function CheckIn() {
   }
 
   function commitEntry() {
+    // Data-integrity gate: in production mode, shoebox entries are locked
+    // to protect real Collection Week tallies. The attempt itself is
+    // audited so leadership can spot accidental write attempts.
+    if (isProduction) {
+      if (user) {
+        logAuditEvent(
+          { id: user.id, name: user.name, role: user.role },
+          'clear_all_signups',
+          'check-in',
+          `BLOCKED shoebox entry attempt: ${count} boxes from ${donorName || '(unnamed)'} — app in production mode`,
+        );
+      }
+      return;
+    }
     const isAnon = !isOrg && (anonymous || !donorName.trim());
     const fallback = isOrg ? 'Unnamed Organization' : 'Anonymous Donor';
     const entry: SessionEntry = {
@@ -140,6 +158,14 @@ export default function CheckIn() {
   return (
     <Layout>
       <div className="px-4 py-4 max-w-2xl mx-auto pb-24">
+        {isProduction && (
+          <div className="mb-4">
+            <ModeLockedCard
+              feature="Shoebox check-in"
+              description="Production mode keeps real Collection Week tallies safe. Switch to testing mode to enter sample data, then back to production before real Collection Week."
+            />
+          </div>
+        )}
         <AnimatePresence mode="wait">
           {step === 'list' && (
             <ListView

@@ -15,6 +15,9 @@ import {
   timeAgo,
 } from '@/data/mockData';
 import type { Carton, BOL } from '@/data/mockData';
+import { useAppMode } from '@/lib/appMode';
+import ModeLockedCard from '@/components/ModeLockedCard';
+import { logAuditEvent } from '@/lib/auditLog';
 
 type Tab = 'create' | 'history';
 type Step = 1 | 2 | 3 | 4;
@@ -55,6 +58,7 @@ function pickCdo(userLocationId: string | undefined): string {
 }
 
 export default function BolLoading() {
+  const { isProduction } = useAppMode();
   const { user, isCDOLeader } = useAuth();
   const cdoId = pickCdo(user?.locationId);
   const cdo = getLocationById(cdoId)!;
@@ -105,6 +109,18 @@ export default function BolLoading() {
   }
 
   function finalizeBOL() {
+    // Data-integrity gate: production mode locks BOL/trailer load entry.
+    if (isProduction) {
+      if (user) {
+        logAuditEvent(
+          { id: user.id, name: user.name, role: user.role },
+          'clear_all_signups',
+          'bol-loading',
+          `BLOCKED BOL finalize: ${selectedCartonIds.length} cartons, ${totalBoxes} boxes — app in production mode`,
+        );
+      }
+      return;
+    }
     const nextNumber = `BOL-${2900 + sessionBOLs.length}`;
     const bol: SessionBOL = {
       id: newId(),
@@ -127,6 +143,12 @@ export default function BolLoading() {
   return (
     <Layout>
       <div className="px-4 py-4 max-w-4xl mx-auto space-y-6 pb-24">
+        {isProduction && (
+          <ModeLockedCard
+            feature="BOL & loading"
+            description="Production mode keeps real shipping manifests safe from test data. Switch to testing mode to practice loading a trailer, then back to production before real Collection Week."
+          />
+        )}
         {/* Editorial hero */}
         <header className="flex items-start justify-between gap-3">
           <div className="space-y-2 pt-1">
