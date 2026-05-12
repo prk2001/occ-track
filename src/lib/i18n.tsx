@@ -49,8 +49,8 @@ const DICT: Record<Locale, Record<string, string>> = {
     'signup.intro.fact.cost': 'Just your time',
     'signup.intro.fact.costValue': '0 cost',
     'signup.intro.cta': 'Sign me up',
-    'signup.intro.alreadyVolunteer': 'Already volunteering this week?',
-    'signup.intro.signIn': 'Sign in instead',
+    'signup.intro.alreadyVolunteer': 'Already signed up?',
+    'signup.intro.signIn': 'Find my edit link',
 
     // Volunteer signup — Contact step
     'signup.contact.title': 'Let\'s start with you.',
@@ -153,8 +153,8 @@ const DICT: Record<Locale, Record<string, string>> = {
     'signup.intro.fact.cost': 'Solo tu tiempo',
     'signup.intro.fact.costValue': '$0',
     'signup.intro.cta': 'Inscríbeme',
-    'signup.intro.alreadyVolunteer': '¿Ya estás sirviendo esta semana?',
-    'signup.intro.signIn': 'Inicia sesión',
+    'signup.intro.alreadyVolunteer': '¿Ya te inscribiste?',
+    'signup.intro.signIn': 'Buscar mi enlace de edición',
 
     // Volunteer signup — Contact step
     'signup.contact.title': 'Empecemos contigo.',

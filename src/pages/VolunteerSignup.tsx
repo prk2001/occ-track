@@ -388,7 +388,7 @@ function IntroStep({ onStart }: { onStart: () => void }) {
         </span>
       </motion.button>
       <p className="text-[11px] text-ink-light/80">
-        {t('signup.intro.alreadyVolunteer')} <Link to="/login" className="font-semibold text-sp-red underline">{t('signup.intro.signIn')}</Link>
+        {t('signup.intro.alreadyVolunteer')} <Link to="/my-signup" className="font-semibold text-sp-red underline">{t('signup.intro.signIn')}</Link>
       </p>
     </motion.section>
   );

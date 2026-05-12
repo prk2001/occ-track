@@ -454,24 +454,62 @@ function LockoutPage({ secondsRemaining }: { secondsRemaining: number }) {
 
 // ─── Invalid link page ────────────────────────────────────────────────────
 function InvalidLinkPage({ reason }: { reason: 'no-token' | 'not-found' | 'expired' }) {
+  const [signups] = useLocalStorage<StoredSignup[]>('occ:signups', []);
+  const [email, setEmail] = useState('');
+  const [sent, setSent] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   const headline = {
     'no-token': 'Link missing.',
     'not-found': 'Link expired.',
     'expired': 'Link expired.',
   }[reason];
   const subhead = {
-    'no-token': "We can't find your signup.",
+    'no-token': "We'll send you a fresh one.",
     'not-found': 'Or your signup was removed.',
     'expired': 'Time to get a fresh one.',
   }[reason];
   const body = {
     'no-token':
-      'This page only works through your personal edit link. Check the link in the email or message you received after you signed up.',
+      'Enter the email you used when you signed up. We will send you your personal edit link.',
     'not-found':
       'The link you used no longer matches an active signup. If you think this is a mistake, contact your Central Drop-off Leader.',
     'expired':
-      'For security, edit links expire 90 days after Collection Week ends. Your Central Drop-off Leader can issue you a fresh link — or you can sign up again if your info needs a full refresh.',
+      'For security, edit links expire 90 days after Collection Week ends. Enter your email and we will issue a fresh link — or you can sign up again if your info needs a full refresh.',
   }[reason];
+
+  async function resendLink() {
+    setError(null);
+    const normalized = email.trim().toLowerCase();
+    if (!normalized || !normalized.includes('@')) {
+      setError('Please enter the email you used at signup.');
+      return;
+    }
+    const match = signups.find((s) => s.email.trim().toLowerCase() === normalized);
+    if (!match || !match.editToken) {
+      // For privacy, we DON'T tell the user whether the email matches.
+      // Same UI either way — bots can't enumerate accounts via this form.
+      setSent(true);
+      logSecuritySignal('invalid_token', `Resend requested for non-matching email`);
+      return;
+    }
+    const origin =
+      typeof window !== 'undefined'
+        ? window.location.origin + window.location.pathname.replace(/\/$/, '')
+        : '';
+    const url = `${origin}#/my-signup?token=${match.editToken}`;
+    sendMessage({
+      kind: 'signup_confirmation',
+      channel: 'email',
+      to: match.email,
+      toName: match.name,
+      subject: 'Your edit link — Operation Christmas Child',
+      body: `Hi ${match.name.split(' ')[0]},\n\nHere's your edit link for your Collection Week 2026 signup:\n\n${url}\n\nThis link is private — anyone with it can edit your signup.\n\nSamaritan's Purse · Operation Christmas Child`,
+      relatedTarget: `signup:${match.id}`,
+    });
+    setSent(true);
+  }
+
   return (
     <Layout hideNav>
       <div className="relative min-h-[100dvh]">
@@ -492,13 +530,69 @@ function InvalidLinkPage({ reason }: { reason: 'no-token' | 'not-found' | 'expir
             <span className="font-display-italic block text-sp-red mt-1">{subhead}</span>
           </h1>
           <p className="text-sm text-ink-light mt-4 italic leading-relaxed">{body}</p>
-          <Link
-            to="/signup"
-            className="inline-flex h-12 px-5 mt-6 bg-sp-red text-white text-sm font-semibold rounded-xl items-center justify-center hover:bg-sp-red-dark transition-colors gap-1.5"
-          >
-            <Sparkles className="w-4 h-4" />
-            Sign up fresh
-          </Link>
+
+          {/* Resend-link form (no-token + expired cases). For not-found we
+              skip the form — the signup itself is gone, nothing to resend. */}
+          {(reason === 'no-token' || reason === 'expired') && (
+            <div className="mt-6 text-left">
+              {sent ? (
+                <div className="bg-occ-green-light border border-occ-green rounded-xl px-4 py-4 flex items-start gap-2.5">
+                  <CheckCircle2 className="w-5 h-5 text-occ-green shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-semibold text-occ-green-dark">
+                      If that email matches a signup, your link is on its way.
+                    </p>
+                    <p className="text-xs text-ink-light italic mt-1">
+                      Check your inbox in a few minutes. Look for a message from
+                      &quot;Operation Christmas Child.&quot;
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <label className="block">
+                    <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-ink-light mb-1.5 flex items-center gap-1.5">
+                      <Mail className="w-3 h-3" />
+                      Email you used at signup
+                    </span>
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="you@email.com"
+                      autoFocus
+                      className="w-full h-12 px-4 bg-bg-primary border border-border-custom rounded-xl text-base text-ink placeholder:text-ink-light/50 focus:outline-none focus:border-sp-red transition-colors"
+                    />
+                  </label>
+                  {error && (
+                    <p className="text-xs text-sp-red font-semibold mt-2 flex items-center gap-1.5">
+                      <AlertCircle className="w-3 h-3" />
+                      {error}
+                    </p>
+                  )}
+                  <button
+                    onClick={resendLink}
+                    disabled={!email}
+                    className="w-full h-12 mt-3 bg-occ-green text-white text-sm font-semibold rounded-xl hover:bg-occ-green-dark transition-colors flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    <Mail className="w-4 h-4" />
+                    Email me my link
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+
+          <div className="mt-6 pt-6 border-t border-border-custom/60">
+            <p className="text-xs text-ink-light italic mb-2">Never signed up before?</p>
+            <Link
+              to="/signup"
+              className="inline-flex h-12 px-5 bg-sp-red text-white text-sm font-semibold rounded-xl items-center justify-center hover:bg-sp-red-dark transition-colors gap-1.5"
+            >
+              <Sparkles className="w-4 h-4" />
+              Sign up fresh
+            </Link>
+          </div>
         </div>
       </div>
     </Layout>

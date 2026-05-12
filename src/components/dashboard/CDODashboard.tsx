@@ -79,7 +79,7 @@ export default function CDODashboard() {
           we give them the *verb* they need: open the kiosk for greeters.
           Counts and names live behind the leadership gate; the kiosk does. */}
       <motion.a
-        href={`#/clock?loc=${cdoId}`}
+        href={`#/welcome-table?loc=${cdoId}`}
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.25, duration: 0.3 }}
