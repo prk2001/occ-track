@@ -4,6 +4,7 @@ import { AuthProvider } from '@/hooks/useAuth';
 import { I18nProvider } from '@/lib/i18n';
 import { AppModeProvider } from '@/lib/appMode';
 import { startTamperWatcher } from '@/lib/tamperDetection';
+import { startAnomalyWatcher } from '@/lib/anomalyDetector';
 import Dashboard from '@/pages/Dashboard';
 import Login from '@/pages/Login';
 import CheckIn from '@/pages/CheckIn';
@@ -32,6 +33,18 @@ export default function App() {
   // 30 seconds + once on mount. Fires a security signal on any mismatch.
   useEffect(() => {
     const stop = startTamperWatcher();
+    return stop;
+  }, []);
+
+  // Background anomaly watcher: every 60s, scan the security log for
+  // honeypot/throttle/brute-force spikes and dispatch alerts to Super
+  // Admin via the outbox. Hardcoded to Franklin Graham (u0) for demo.
+  useEffect(() => {
+    const stop = startAnomalyWatcher({
+      superAdminUserId: 'u0',
+      superAdminName: 'Franklin Graham',
+      superAdminEmail: 'fgraham@samaritanspurse.org',
+    });
     return stop;
   }, []);
   return (

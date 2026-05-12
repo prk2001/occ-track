@@ -5,7 +5,7 @@ import {
   ClipboardList, Calendar, Users, Lock, Unlock, CalendarOff, Plus, X, Phone, Mail,
   CheckCircle2, AlertCircle, Shield, Sparkles, ChevronRight, MessageCircle, Trash2,
   Pencil, Search, Mail as MailIcon, RotateCcw, Printer, Download, ArrowDownAZ, ArrowDown01,
-  UserCheck, UserX, Eye, EyeOff,
+  UserCheck, UserX, Eye, EyeOff, Send, KeyRound,
 } from 'lucide-react';
 import Layout from '@/components/Layout';
 import { useAuth } from '@/hooks/useAuth';
@@ -18,9 +18,12 @@ import {
   timeAgo,
 } from '@/data/mockData';
 import type { DayBlock, StoredSignup } from '@/data/mockData';
-import { findDuplicateSignups, signupInScopeForUser, DEFAULT_CDO_ID, LOCATIONS } from '@/data/mockData';
+import { findDuplicateSignups, signupInScopeForUser, DEFAULT_CDO_ID, LOCATIONS, defaultTokenExpiry } from '@/data/mockData';
 import { logAuditEvent } from '@/lib/auditLog';
 import { buildArrivalConfirmation, sendMessage } from '@/lib/outbox';
+import BulkImportDialog from '@/components/BulkImportDialog';
+import TransferDialog from '@/components/TransferDialog';
+import { Upload, ArrowRightLeft } from 'lucide-react';
 import { logSecuritySignal } from '@/lib/security';
 import { useNoIndex } from '@/hooks/useNoIndex';
 
@@ -51,6 +54,19 @@ export default function Signups() {
   // here; auto-restores after 30s. Session-only — no localStorage.
   const [revealedIds, setRevealedIds] = useState<Set<string>>(new Set());
   const [piiBlurredGlobal, setPiiBlurredGlobal] = useState<boolean>(true);
+  const [importOpen, setImportOpen] = useState<boolean>(false);
+  const [transferTarget, setTransferTarget] = useState<StoredSignup | null>(null);
+
+  function handleBulkImport(imported: StoredSignup[], filename: string) {
+    setSignups((prev) => [...imported, ...prev]);
+    logAuditEvent(actor, 'volunteer_signup_created', `bulk-import:${filename}`, `Bulk imported ${imported.length} signups`);
+  }
+
+  function handleTransfer(signupId: string, _fromId: string, toId: string) {
+    setSignups((prev) =>
+      prev.map((s) => (s.id === signupId ? { ...s, locationId: toId } : s)),
+    );
+  }
 
   function toggleRevealRow(id: string) {
     setRevealedIds((prev) => {
@@ -213,6 +229,65 @@ export default function Signups() {
     if (removed) {
       logAuditEvent(actor, 'remove_signup', `signup:${id}`, `Removed ${removed.name} (${removed.email})`);
     }
+  }
+
+  // Resend: keep the existing editToken, just send a fresh email with the
+  // same link. Used when the volunteer says "I can't find my link."
+  function resendMagicLink(id: string) {
+    const target = signups.find((s) => s.id === id);
+    if (!target || !target.editToken) return;
+    const origin = typeof window !== 'undefined'
+      ? window.location.origin + window.location.pathname.replace(/\/$/, '')
+      : '';
+    const url = `${origin}#/my-signup?token=${target.editToken}`;
+    sendMessage({
+      kind: 'signup_confirmation',
+      channel: 'email',
+      to: target.email,
+      toName: target.name,
+      subject: 'Your edit link (resent) — Operation Christmas Child',
+      body: `Hi ${target.name.split(' ')[0]},\n\nHere\'s your edit link, resent at your request:\n\n${url}\n\nThis link is private — anyone with it can edit your signup. Bookmark it.\n\nSamaritan\'s Purse · Operation Christmas Child`,
+      relatedTarget: `signup:${id}`,
+    });
+    logAuditEvent(actor, 'email_all', `signup:${id}`, `Resent existing magic link to ${target.name} (${target.email})`);
+  }
+
+  // Reissue: mint a NEW editToken, invalidating the old. Used when the
+  // volunteer suspects their link was compromised (e.g. forwarded by
+  // accident, shared with a stranger). Old link immediately stops working.
+  function reissueMagicLink(id: string) {
+    const target = signups.find((s) => s.id === id);
+    if (!target) return;
+    const confirmed = window.confirm(
+      `Reissue magic link for ${target.name}?\n\nThe OLD link will stop working immediately. The volunteer must use the NEW link from the email we send them.\n\nUse this only if you suspect their link was leaked or shared. For a routine "I lost my link" — use Resend instead.\n\nContinue?`,
+    );
+    if (!confirmed) return;
+    const newToken =
+      typeof crypto !== 'undefined' && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `tok_${Date.now()}_${Math.random().toString(36).slice(2, 12)}`;
+    const now = new Date().toISOString();
+    setSignups((prev) =>
+      prev.map((s) =>
+        s.id === id
+          ? { ...s, editToken: newToken, editTokenExpiresAt: defaultTokenExpiry(now) }
+          : s,
+      ),
+    );
+    const origin = typeof window !== 'undefined'
+      ? window.location.origin + window.location.pathname.replace(/\/$/, '')
+      : '';
+    const url = `${origin}#/my-signup?token=${newToken}`;
+    sendMessage({
+      kind: 'signup_confirmation',
+      channel: 'email',
+      to: target.email,
+      toName: target.name,
+      subject: 'NEW edit link (security reissue) — Operation Christmas Child',
+      body: `Hi ${target.name.split(' ')[0]},\n\nYour Central Drop-off Leader has issued you a fresh edit link. The OLD link no longer works.\n\nHere is your NEW link:\n\n${url}\n\nIf you did not request this, please contact your Central Drop-off Leader immediately.\n\nSamaritan\'s Purse · Operation Christmas Child`,
+      relatedTarget: `signup:${id}`,
+    });
+    logAuditEvent(actor, 'volunteer_self_edit', `signup:${id}`, `REISSUED magic link for ${target.name} — old token revoked`);
   }
 
   function markArrived(id: string) {
@@ -432,11 +507,18 @@ export default function Signups() {
                       {piiBlurredGlobal ? 'PII hidden' : 'PII visible'}
                     </button>
                     <button
+                      onClick={() => setImportOpen(true)}
+                      className="h-9 px-3 bg-bg-primary border border-border-custom hover:border-purple-accent hover:text-purple-accent text-ink-light text-xs font-bold rounded-xl flex items-center gap-1.5 uppercase tracking-wider transition-all"
+                    >
+                      <Upload className="w-3 h-3" />
+                      Import
+                    </button>
+                    <button
                       onClick={downloadCSV}
                       className="h-9 px-3 bg-bg-primary border border-border-custom hover:border-blue-accent hover:text-blue-accent text-ink-light text-xs font-bold rounded-xl flex items-center gap-1.5 uppercase tracking-wider transition-all"
                     >
                       <Download className="w-3 h-3" />
-                      CSV
+                      Export
                     </button>
                     <button
                       onClick={() => {
@@ -507,13 +589,22 @@ export default function Signups() {
                     When volunteers complete the public signup form, they'll show up here with
                     their contact info — ready for you to plan the week.
                   </p>
-                  <Link
-                    to="/signup"
-                    className="inline-flex items-center gap-1.5 mt-4 px-4 h-10 bg-lime text-occ-green-dark font-semibold rounded-xl hover:bg-lime-dark hover:text-white transition-colors"
-                  >
-                    <Sparkles className="w-3.5 h-3.5" />
-                    Test the signup flow
-                  </Link>
+                  <div className="flex items-center justify-center gap-2 mt-4 flex-wrap">
+                    <Link
+                      to="/signup"
+                      className="inline-flex items-center gap-1.5 px-4 h-10 bg-lime text-occ-green-dark font-semibold rounded-xl hover:bg-lime-dark hover:text-white transition-colors"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                      Test the signup flow
+                    </Link>
+                    <button
+                      onClick={() => setImportOpen(true)}
+                      className="inline-flex items-center gap-1.5 px-4 h-10 bg-purple-light text-purple-accent font-semibold rounded-xl hover:bg-purple-accent hover:text-white transition-colors"
+                    >
+                      <Upload className="w-3.5 h-3.5" />
+                      Import from CSV
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <motion.ul
@@ -529,6 +620,9 @@ export default function Signups() {
                       isDuplicate={duplicateIds.has(s.id)}
                       isPiiBlurred={piiBlurredGlobal && !revealedIds.has(s.id)}
                       onToggleReveal={() => toggleRevealRow(s.id)}
+                      onResendLink={() => resendMagicLink(s.id)}
+                      onReissueLink={() => reissueMagicLink(s.id)}
+                      onTransfer={() => setTransferTarget(s)}
                       onRemove={() => removeSignup(s.id)}
                     />
                   ))}
@@ -538,6 +632,22 @@ export default function Signups() {
           </>
         )}
       </div>
+
+      <BulkImportDialog
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        onImport={handleBulkImport}
+        existingSignups={signups}
+        actor={user}
+      />
+
+      <TransferDialog
+        open={!!transferTarget}
+        signup={transferTarget}
+        onClose={() => setTransferTarget(null)}
+        onTransfer={handleTransfer}
+        actor={user}
+      />
 
       <AnimatePresence>
         {blockingDate && (
@@ -682,12 +792,15 @@ function DayCard({
 
 // ─── Signup card ────────────────────────────────────────────────────────────
 function SignupCard({
-  signup, isDuplicate, isPiiBlurred, onToggleReveal, onRemove,
+  signup, isDuplicate, isPiiBlurred, onToggleReveal, onResendLink, onReissueLink, onTransfer, onRemove,
 }: {
   signup: StoredSignup;
   isDuplicate?: boolean;
   isPiiBlurred?: boolean;
   onToggleReveal?: () => void;
+  onResendLink?: () => void;
+  onReissueLink?: () => void;
+  onTransfer?: () => void;
   onRemove: () => void;
 }) {
   const initials = signup.name.split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase();
@@ -785,13 +898,46 @@ function SignupCard({
             </div>
           )}
         </div>
-        <button
-          onClick={onRemove}
-          className="touch-target text-ink-light/60 hover:text-sp-red transition-colors shrink-0 print-hide"
-          aria-label={`Remove ${signup.name}`}
-        >
-          <Trash2 className="w-4 h-4" />
-        </button>
+        <div className="flex flex-col gap-1 shrink-0 print-hide">
+          {onResendLink && signup.editToken && (
+            <button
+              onClick={onResendLink}
+              className="touch-target text-ink-light/60 hover:text-occ-green transition-colors"
+              aria-label={`Resend edit link to ${signup.name}`}
+              title="Resend their existing magic link by email"
+            >
+              <Send className="w-4 h-4" />
+            </button>
+          )}
+          {onReissueLink && signup.editToken && (
+            <button
+              onClick={onReissueLink}
+              className="touch-target text-ink-light/60 hover:text-gold transition-colors"
+              aria-label={`Reissue edit link for ${signup.name}`}
+              title="Reissue a NEW magic link (revokes old one) — for security incidents"
+            >
+              <KeyRound className="w-4 h-4" />
+            </button>
+          )}
+          {onTransfer && (
+            <button
+              onClick={onTransfer}
+              className="touch-target text-ink-light/60 hover:text-blue-accent transition-colors"
+              aria-label={`Transfer ${signup.name} to another CDO`}
+              title="Transfer this volunteer to another Central Drop-off"
+            >
+              <ArrowRightLeft className="w-4 h-4" />
+            </button>
+          )}
+          <button
+            onClick={onRemove}
+            className="touch-target text-ink-light/60 hover:text-sp-red transition-colors"
+            aria-label={`Remove ${signup.name}`}
+            title="Remove this signup entirely"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
       </div>
     </motion.li>
   );
