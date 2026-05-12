@@ -1,8 +1,9 @@
 # OCC Track — Master TODO
 
-**Last audit:** Phase 32 complete — round 2 of audit fixes. 139 tests
-across 16 files green. Initial bundle 292 KB gzipped. 5 unused deps
-removed. Strict tsconfig (`noUnusedLocals`/`noUnusedParameters` ON).
+**Last audit:** Phase 33 complete — dead-code purge + E2E expansion + docs.
+139 unit/component + 10 E2E tests all green. 53 dead shadcn files
+deleted, 36 more npm deps removed (production deps: 80 → 8).
+Admin guide + deployment runbook published in docs/.
 Source at `https://github.com/prk2001/occ-track`.
 
 This document inventories everything the prototype already has, then maps
@@ -21,10 +22,12 @@ engineer-week of focused work; priorities reflect what blocks production.
 | Lib + hooks | 14 |
 | TypeScript LOC | ~12,200 |
 | Commits since Phase 14 | 15 |
-| Tests | **139** (113 → 136 unit/component + 3 E2E) |
+| Tests | **149** (139 unit/component + 10 E2E across 17 files) |
 | Real backend | **0** (everything is localStorage) |
 | Public GitHub URL | https://github.com/prk2001/occ-track |
 | Initial bundle (gzipped) | **292 KB** (down from 358 KB via code-splitting in Phase 31) |
+| Production deps | **8** (down from 80 — removed 5 in Phase 32 + 36 in Phase 33) |
+| Source files | 81 components → **28** (Phase 33 deleted dead shadcn/ui) |
 | Spanish coverage | **Complete** for all public surfaces (Phase 29) |
 | CI | GitHub Actions: tsc + vitest + Playwright on every PR (Phase 30) |
 
@@ -88,6 +91,29 @@ engineer-week of focused work; priorities reflect what blocks production.
 ---
 
 ## Recent completions (since the last TODO refresh)
+
+- **Phase 33 — Dead-code purge + E2E expansion + documentation.**
+    - **Deleted `src/components/ui/`** (53 files, 300 KB of shadcn boilerplate).
+      Verified zero imports outside the directory. Removed 36 transitively-
+      dead npm deps (every `@radix-ui/*`, `cmdk`, `embla-carousel-react`,
+      `input-otp`, `next-themes`, `react-day-picker`, `react-hook-form`,
+      `react-resizable-panels`, `sonner`, `vaul`, `class-variance-authority`).
+      Production deps: **80 → 8**. Build clean, all tests pass.
+    - **7 new E2E tests** for admin flows in `src/test/e2e/admin-flows.spec.ts`:
+      default-null redirect, login as Super Admin, login as CDO Leader →
+      privacy lock card on /signups, production-mode blocks /checkin,
+      /security gated correctly per role, skip-to-main first-focusable.
+      All 10 E2E tests pass (3 from signup-flow + 7 new).
+    - **New `docs/ADMIN_GUIDE.md`** — non-engineer walkthrough of the 7
+      daily tasks (schedule setup, signup invitations, roster management,
+      bulk import, badges, kiosk launch, Collection Week ops). Plus
+      Super Admin extras (audit log, outbox, security center, app mode)
+      + 5 FAQ entries.
+    - **New `docs/DEPLOYMENT.md`** — engineer runbook covering:
+      topology diagram, first-time prod deploy (DB / auth / email / SMS /
+      CAPTCHA / WAF / monitoring), anomaly response playbook (5 scenarios),
+      common production tasks (add role / route / translation), backup +
+      DR strategy, going-live checklist.
 
 - **Phase 32 — Round 2 audit fixes.** Picked off the remaining high-leverage
   items the auditor flagged:

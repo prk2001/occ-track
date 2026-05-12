@@ -39,8 +39,8 @@ test.describe('Volunteer signup → magic link → self-edit', () => {
 
     // 3. Details
     await expect(page.getByText(/Almost done/i)).toBeVisible();
-    await page.getByRole('button', { name: /Yes, first time/i }).click();
-    await page.getByRole('button', { name: 'M', exact: true }).click();
+    await page.getByRole('radio', { name: /Yes, first time/i }).click();
+    await page.getByRole('button', { name: /T-shirt size M/i }).click();
     // CAPTCHA stub
     await page.getByRole('button', { name: /I[\'’]m not a robot/i }).click();
     await expect(page.getByText(/Verified\./i)).toBeVisible({ timeout: 5000 });
