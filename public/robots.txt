@@ -1,0 +1,48 @@
+# OCC Track — Crawler Exclusion
+#
+# This is a static-hosted React SPA using HashRouter (URLs look like
+# /#/signups, /#/audit-log, etc.). Search engines don't traverse hash
+# fragments, so most private routes are naturally unreachable to crawlers.
+# We still block the route patterns below as defense in depth — and so a
+# future migration to BrowserRouter inherits the safety.
+#
+# Private routes (PII or admin-only):
+#   /signups          — volunteer roster, admin only
+#   /audit-log        — Super Admin only
+#   /outbox           — Super Admin only
+#   /badges           — printable PII, admin only
+#   /welcome-table    — fullscreen kiosk, contains names
+#   /clock            — kiosk with volunteer roster
+#   /my-signup        — capability URL with edit token
+#   /security         — Super Admin only
+#
+# Public routes (OK to index):
+#   /                 — dashboard (role-aware; public for marketing)
+#   /signup           — volunteer signup form
+#
+# Per-page `<meta name="robots" content="noindex,nofollow">` on the
+# private routes provides the in-document signal that complements this.
+
+User-agent: *
+Disallow: /signups
+Disallow: /audit-log
+Disallow: /outbox
+Disallow: /badges
+Disallow: /welcome-table
+Disallow: /clock
+Disallow: /my-signup
+Disallow: /security
+
+# Hash-fragment variants (BrowserRouter or future SSR migration).
+# robots.txt doesn't formally support # — these are harmless to include
+# but most crawlers ignore them. Listed for documentation completeness.
+Disallow: /#/signups
+Disallow: /#/audit-log
+Disallow: /#/outbox
+Disallow: /#/badges
+Disallow: /#/welcome-table
+Disallow: /#/clock
+Disallow: /#/my-signup
+Disallow: /#/security
+
+Sitemap:

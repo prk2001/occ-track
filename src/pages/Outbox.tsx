@@ -18,6 +18,7 @@ import type { OutboxChannel, OutboxMessage } from '@/lib/outbox';
 import { logAuditEvent } from '@/lib/auditLog';
 import { COLLECTION_WEEK_START, timeAgo } from '@/data/mockData';
 import type { StoredSignup } from '@/data/mockData';
+import { useNoIndex } from '@/hooks/useNoIndex';
 
 /**
  * Notification outbox viewer — Super Admin only.
@@ -33,6 +34,7 @@ import type { StoredSignup } from '@/data/mockData';
  *   - Failed deliveries show up here with their provider error message
  */
 export default function Outbox() {
+  useNoIndex();
   const { user, isSuperAdmin } = useAuth();
   const [messages] = useLocalStorage<OutboxMessage[]>(OUTBOX_KEY, []);
   const [signups, setSignups] = useLocalStorage<StoredSignup[]>('occ:signups', []);

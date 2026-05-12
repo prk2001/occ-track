@@ -12,6 +12,7 @@ import {
 } from '@/data/mockData';
 import type { StoredSignup } from '@/data/mockData';
 import { logAuditEvent } from '@/lib/auditLog';
+import { useNoIndex } from '@/hooks/useNoIndex';
 
 /**
  * Volunteer name-tag printout — Avery 5390 (8 per page, 3⅜" × 2⅓").
@@ -27,6 +28,7 @@ import { logAuditEvent } from '@/lib/auditLog';
  * standard lock screen.
  */
 export default function Badges() {
+  useNoIndex();
   const { user, isRegionalAdmin } = useAuth();
   const [signups] = useLocalStorage<StoredSignup[]>('occ:signups', []);
   const [printed, setPrinted] = useState(false);

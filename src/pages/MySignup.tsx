@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
+import { useNoIndex } from '@/hooks/useNoIndex';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ShieldCheck, User, Phone, Mail, MapPin, Shield, Shirt, MessageCircle,
@@ -11,6 +12,12 @@ import Logo from '@/components/Logo';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { logAuditEvent } from '@/lib/auditLog';
 import { buildSelfEditAlert, sendMessage } from '@/lib/outbox';
+import {
+  isTokenLocked,
+  logSecuritySignal,
+  recordTokenFailure,
+  resetTokenFailures,
+} from '@/lib/security';
 import type { ShirtSize, StoredSignup } from '@/data/mockData';
 import {
   DEFAULT_CDO_ID,
@@ -38,6 +45,7 @@ import {
  * For a prototype, the bare token model is the right abstraction.
  */
 export default function MySignup() {
+  useNoIndex();
   const [params] = useSearchParams();
   const token = params.get('token') ?? '';
   const [signups, setSignups] = useLocalStorage<StoredSignup[]>('occ:signups', []);
@@ -67,14 +75,34 @@ export default function MySignup() {
       : null,
   );
 
+  // Brute-force gate: if this browser has hit too many failed token
+  // lookups recently, show the lockout wall before anything else. We
+  // check this BEFORE the token presence/match checks so a bot probing
+  // random tokens hits the wall immediately.
+  const lockout = isTokenLocked();
+  if (lockout.locked) {
+    return <LockoutPage secondsRemaining={lockout.secondsRemaining} />;
+  }
+
   // No token at all — distinct from "token doesn't match anything"
   if (!token) {
     return <InvalidLinkPage reason="no-token" />;
   }
   // Token provided but didn't match — link expired or signup was deleted.
+  // Each miss counts against the brute-force budget; the Nth one trips
+  // the lockout for 15 minutes.
   if (!signup || !draft) {
+    const tripped = recordTokenFailure();
+    logSecuritySignal('invalid_token', `token-prefix=${token.slice(0, 8)}...`);
+    if (tripped) {
+      logSecuritySignal('token_bruteforce_lockout', 'Threshold reached; locked for 15 minutes');
+    }
     return <InvalidLinkPage reason="not-found" />;
   }
+  // Valid match — reset the failure counter so a typo earlier doesn't
+  // keep accumulating against the next legitimate visit.
+  resetTokenFailures();
+
   // Token matched but the timestamp says it's past its lifetime.
   const expiry = tokenStatus(signup.editTokenExpiresAt);
   if (expiry.state === 'expired') {
@@ -378,6 +406,45 @@ export default function MySignup() {
           <p className="text-[11px] text-ink-light italic text-center mt-3 max-w-sm mx-auto">
             Your edits go straight to your Central Drop-off Leader. They&apos;ll see
             the most current info when they plan the week.
+          </p>
+        </div>
+      </div>
+    </Layout>
+  );
+}
+
+// ─── Lockout page ─────────────────────────────────────────────────────────
+// Shown when a browser has tripped the magic-link brute-force threshold.
+// Friendly tone (we don't want to scare off a legitimate confused user)
+// but firm — no retry button, no refresh shortcut. They wait it out.
+function LockoutPage({ secondsRemaining }: { secondsRemaining: number }) {
+  const minutes = Math.ceil(secondsRemaining / 60);
+  return (
+    <Layout hideNav>
+      <div className="relative min-h-[100dvh]">
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[420px] h-[420px] rounded-full bg-sp-red/8 blur-[120px]" />
+        </div>
+        <div className="relative px-5 pt-12 pb-12 max-w-md mx-auto text-center">
+          <Logo size={32} className="mx-auto mb-8" />
+          <div className="w-16 h-16 mx-auto bg-sp-red-light rounded-full flex items-center justify-center mb-4">
+            <ClockIcon className="w-8 h-8 text-sp-red" />
+          </div>
+          <h1 className="font-display text-3xl text-ink leading-[1.1] tracking-tight">
+            Slow down.
+            <span className="font-display-italic block text-sp-red mt-1">
+              Too many attempts.
+            </span>
+          </h1>
+          <p className="text-sm text-ink-light mt-4 italic leading-relaxed">
+            We&apos;ve paused this browser for {minutes} {minutes === 1 ? 'minute' : 'minutes'}{' '}
+            to protect everyone&apos;s signup info. If you&apos;re trying to edit
+            your own signup, find your magic link in the email we sent you
+            after signing up — and come back then.
+          </p>
+          <p className="text-xs text-ink-light/60 italic mt-6 leading-relaxed">
+            If you think this is a mistake, contact your Central Drop-off
+            Leader — they can issue a fresh link.
           </p>
         </div>
       </div>

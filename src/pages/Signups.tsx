@@ -5,7 +5,7 @@ import {
   ClipboardList, Calendar, Users, Lock, Unlock, CalendarOff, Plus, X, Phone, Mail,
   CheckCircle2, AlertCircle, Shield, Sparkles, ChevronRight, MessageCircle, Trash2,
   Pencil, Search, Mail as MailIcon, RotateCcw, Printer, Download, ArrowDownAZ, ArrowDown01,
-  UserCheck, UserX,
+  UserCheck, UserX, Eye, EyeOff,
 } from 'lucide-react';
 import Layout from '@/components/Layout';
 import { useAuth } from '@/hooks/useAuth';
@@ -21,6 +21,8 @@ import type { DayBlock, StoredSignup } from '@/data/mockData';
 import { findDuplicateSignups, signupInScopeForUser, DEFAULT_CDO_ID, LOCATIONS } from '@/data/mockData';
 import { logAuditEvent } from '@/lib/auditLog';
 import { buildArrivalConfirmation, sendMessage } from '@/lib/outbox';
+import { logSecuritySignal } from '@/lib/security';
+import { useNoIndex } from '@/hooks/useNoIndex';
 
 // Seed: Saturday is often covered by a youth group. Demos the blocked
 // state on first load; user can clear via Reopen.
@@ -34,6 +36,7 @@ const SEED_BLOCKS: DayBlock[] = [
 ];
 
 export default function Signups() {
+  useNoIndex();
   const { user, isRegionalAdmin } = useAuth();
   const cdoLabel = getLocationById('cdo1')?.name ?? 'Central Drop-off';
   const [signups, setSignups] = useLocalStorage<StoredSignup[]>('occ:signups', []);
@@ -43,6 +46,34 @@ export default function Signups() {
   const [editingTimeDate, setEditingTimeDate] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'name'>('newest');
+  // PII blur: privacy-by-default. PII (phone, email, emergency contact)
+  // is hidden until the admin clicks "Reveal." Per-card reveal state lives
+  // here; auto-restores after 30s. Session-only — no localStorage.
+  const [revealedIds, setRevealedIds] = useState<Set<string>>(new Set());
+  const [piiBlurredGlobal, setPiiBlurredGlobal] = useState<boolean>(true);
+
+  function toggleRevealRow(id: string) {
+    setRevealedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+        logSecuritySignal('pii_blur_restored', `signup:${id}`);
+      } else {
+        next.add(id);
+        logSecuritySignal('pii_reveal', `signup:${id}`);
+      }
+      return next;
+    });
+    // Auto-restore blur for this row after 30s — limits exposure window.
+    setTimeout(() => {
+      setRevealedIds((prev) => {
+        if (!prev.has(id)) return prev;
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }, 30000);
+  }
 
   // Actor context — every audit event needs to know who did it. Memoized so
   // we don't rebuild a new object on every render that would invalidate the
@@ -383,6 +414,24 @@ export default function Signups() {
                 {scopedSignups.length > 0 && (
                   <div className="flex items-center gap-2 print-hide flex-wrap">
                     <button
+                      onClick={() => {
+                        setPiiBlurredGlobal((v) => {
+                          // Toggling unhide -> hide also clears any per-row reveals.
+                          if (!v) setRevealedIds(new Set());
+                          return !v;
+                        });
+                      }}
+                      className={`h-9 px-3 border text-xs font-bold rounded-xl flex items-center gap-1.5 uppercase tracking-wider transition-all ${
+                        piiBlurredGlobal
+                          ? 'bg-bg-primary border-border-custom text-ink-light hover:border-ink hover:text-ink'
+                          : 'bg-ink border-ink text-white hover:bg-ink/90'
+                      }`}
+                      title={piiBlurredGlobal ? 'PII is hidden. Click to reveal all.' : 'PII is visible. Click to hide.'}
+                    >
+                      {piiBlurredGlobal ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+                      {piiBlurredGlobal ? 'PII hidden' : 'PII visible'}
+                    </button>
+                    <button
                       onClick={downloadCSV}
                       className="h-9 px-3 bg-bg-primary border border-border-custom hover:border-blue-accent hover:text-blue-accent text-ink-light text-xs font-bold rounded-xl flex items-center gap-1.5 uppercase tracking-wider transition-all"
                     >
@@ -478,6 +527,8 @@ export default function Signups() {
                       key={s.id}
                       signup={s}
                       isDuplicate={duplicateIds.has(s.id)}
+                      isPiiBlurred={piiBlurredGlobal && !revealedIds.has(s.id)}
+                      onToggleReveal={() => toggleRevealRow(s.id)}
                       onRemove={() => removeSignup(s.id)}
                     />
                   ))}
@@ -630,8 +681,22 @@ function DayCard({
 }
 
 // ─── Signup card ────────────────────────────────────────────────────────────
-function SignupCard({ signup, isDuplicate, onRemove }: { signup: StoredSignup; isDuplicate?: boolean; onRemove: () => void }) {
+function SignupCard({
+  signup, isDuplicate, isPiiBlurred, onToggleReveal, onRemove,
+}: {
+  signup: StoredSignup;
+  isDuplicate?: boolean;
+  isPiiBlurred?: boolean;
+  onToggleReveal?: () => void;
+  onRemove: () => void;
+}) {
   const initials = signup.name.split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase();
+  // Tailwind doesn't easily blur text without affecting layout. We use
+  // a CSS filter so the row keeps its dimensions; hover reveals to make
+  // the admin's intent explicit (no accidental drive-by reads).
+  const blurClass = isPiiBlurred
+    ? 'blur-sm select-none hover:blur-none transition-all cursor-pointer'
+    : '';
   return (
     <motion.li
       variants={{
@@ -675,12 +740,23 @@ function SignupCard({ signup, isDuplicate, onRemove }: { signup: StoredSignup; i
             </div>
           </div>
 
-          <div className="mt-3 grid grid-cols-1 gap-1.5 text-[11px]">
-            <a href={`tel:${signup.phone}`} className="flex items-center gap-1.5 text-ink-light hover:text-sp-red transition-colors tabular-nums">
-              <Phone className="w-3 h-3 shrink-0" />
-              {signup.phone}
+          <div
+            className="mt-3 grid grid-cols-1 gap-1.5 text-[11px]"
+            onClick={isPiiBlurred ? onToggleReveal : undefined}
+          >
+            <a
+              href={isPiiBlurred ? undefined : `tel:${signup.phone}`}
+              className={`flex items-center gap-1.5 text-ink-light hover:text-sp-red transition-colors tabular-nums ${blurClass}`}
+              onClick={(e) => { if (isPiiBlurred) e.preventDefault(); }}
+            >
+              <Phone className="w-3 h-3 shrink-0 not-blurred" />
+              <span>{signup.phone}</span>
             </a>
-            <a href={`mailto:${signup.email}`} className="flex items-center gap-1.5 text-ink-light hover:text-sp-red transition-colors truncate">
+            <a
+              href={isPiiBlurred ? undefined : `mailto:${signup.email}`}
+              className={`flex items-center gap-1.5 text-ink-light hover:text-sp-red transition-colors truncate ${blurClass}`}
+              onClick={(e) => { if (isPiiBlurred) e.preventDefault(); }}
+            >
               <Mail className="w-3 h-3 shrink-0" />
               <span className="truncate">{signup.email}</span>
             </a>
@@ -692,7 +768,10 @@ function SignupCard({ signup, isDuplicate, onRemove }: { signup: StoredSignup; i
                 <p><span className="font-semibold text-ink uppercase tracking-wider text-[9px]">Shirt:</span> {signup.shirtSize}</p>
               )}
               {signup.emergencyName && (
-                <p className="flex items-start gap-1.5">
+                <p
+                  className={`flex items-start gap-1.5 ${blurClass}`}
+                  onClick={isPiiBlurred ? onToggleReveal : undefined}
+                >
                   <Shield className="w-3 h-3 shrink-0 mt-0.5" />
                   <span><span className="font-semibold text-ink">{signup.emergencyName}</span>{signup.emergencyPhone && ` · ${signup.emergencyPhone}`}</span>
                 </p>

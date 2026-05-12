@@ -15,6 +15,7 @@ import {
 import type { StoredSignup } from '@/data/mockData';
 import { logAuditEvent } from '@/lib/auditLog';
 import { buildArrivalConfirmation, sendMessage } from '@/lib/outbox';
+import { useNoIndex } from '@/hooks/useNoIndex';
 
 /**
  * Welcome Table — fullscreen kiosk for a tablet at the front door.
@@ -32,6 +33,7 @@ import { buildArrivalConfirmation, sendMessage } from '@/lib/outbox';
  *   - No back button (it's a kiosk; greeter exits via the corner X)
  */
 export default function WelcomeTable() {
+  useNoIndex();
   const [params] = useSearchParams();
   const locationId = params.get('loc') || DEFAULT_CDO_ID;
   const location = getLocationById(locationId);

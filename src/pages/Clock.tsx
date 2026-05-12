@@ -20,6 +20,7 @@ import {
 import type { StoredSignup, Volunteer } from '@/data/mockData';
 import { logAuditEvent } from '@/lib/auditLog';
 import { buildArrivalConfirmation, sendMessage } from '@/lib/outbox';
+import { useNoIndex } from '@/hooks/useNoIndex';
 
 type Step = 'location' | 'volunteer' | 'action' | 'done';
 type Action = 'in' | 'out';
@@ -37,6 +38,7 @@ interface ClockEvent {
  * held in a parking lot AND for a tablet kiosk at the welcome table.
  */
 export default function Clock() {
+  useNoIndex();
   const navigate = useNavigate();
   const { search } = useLocation();
   const params = new URLSearchParams(search);

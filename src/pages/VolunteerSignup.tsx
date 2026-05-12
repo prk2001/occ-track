@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -29,6 +29,14 @@ import {
 import type { DayBlock, ShirtSize, StoredSignup } from '@/data/mockData';
 import { logAuditEvent } from '@/lib/auditLog';
 import { buildCdoSignupAlert, buildSignupConfirmation, sendMessage } from '@/lib/outbox';
+import {
+  checkSignupThrottle,
+  HONEYPOT_FIELD_NAME,
+  HONEYPOT_HIDDEN_STYLE,
+  logSecuritySignal,
+  MIN_FILL_SECONDS,
+  stampSignupThrottle,
+} from '@/lib/security';
 
 // Note on roles: in real OCC practice, volunteers sign up just to *serve* —
 // the Central Drop-off Leader assigns specific roles (Greeter, Counter,
@@ -78,11 +86,47 @@ export default function VolunteerSignup() {
   const [signups, setSignups] = useLocalStorage<StoredSignup[]>('occ:signups', []);
   const [submittedId, setSubmittedId] = useState<string>('');
 
+  // ── Anti-bot defenses ──────────────────────────────────────────────────
+  // Three layers, all cheap, all bypassable individually but expensive
+  // together: honeypot field, time-to-fill threshold, per-browser throttle.
+  // None of these substitute for server-side rate limits + CAPTCHA in prod.
+  const [honeypot, setHoneypot] = useState('');
+  const [submitBlocked, setSubmitBlocked] = useState<string | null>(null);
+  const mountedAt = useRef<number>(Date.now());
+  useEffect(() => {
+    mountedAt.current = Date.now();
+  }, []);
+
   function patch(p: Partial<SignupDraft>) {
     setDraft((d) => ({ ...d, ...p }));
   }
 
   function submit() {
+    // Honeypot check — visible to bots, invisible to humans. If anything
+    // landed in the hidden field, treat it as a bot and silently fail.
+    // We DO log the security signal but show a generic "thanks" path to
+    // avoid telling the bot why it was rejected.
+    if (honeypot.trim().length > 0) {
+      logSecuritySignal('honeypot_filled', `field=${HONEYPOT_FIELD_NAME} value=${honeypot.slice(0, 40)}`);
+      setSubmitBlocked("Hmm, that didn't go through. Please refresh the page and try again.");
+      return;
+    }
+    // Time-to-fill check — humans take >3 seconds to fill a multi-field
+    // form. Bots that auto-DOM-fill and click submit do it in <1 second.
+    const elapsedSeconds = (Date.now() - mountedAt.current) / 1000;
+    if (elapsedSeconds < MIN_FILL_SECONDS) {
+      logSecuritySignal('submit_too_fast', `elapsed=${elapsedSeconds.toFixed(2)}s`);
+      setSubmitBlocked("Hmm, that didn't go through. Please refresh the page and try again.");
+      return;
+    }
+    // Per-browser throttle — same browser can't re-submit within 10s.
+    const throttleRemaining = checkSignupThrottle();
+    if (throttleRemaining !== null) {
+      logSecuritySignal('signup_throttled', `wait=${throttleRemaining}s`);
+      setSubmitBlocked(`Please wait ${throttleRemaining}s before submitting again.`);
+      return;
+    }
+
     const id = newId();
     // editToken: an unguessable capability URL secret. Volunteer gets it in
     // the success step; admins never see it on the roster. crypto.randomUUID
@@ -108,6 +152,7 @@ export default function VolunteerSignup() {
     setSignups((prev) => [stored, ...prev]);
     setSubmittedId(id);
     setStep('done');
+    stampSignupThrottle();
     // Audit trail: every new signup is logged so leadership can see
     // creation events alongside views/edits on /audit-log.
     logAuditEvent(
@@ -215,6 +260,9 @@ export default function VolunteerSignup() {
                 onBack={() => setStep('contact')}
                 onSubmit={submit}
                 ok={finalOk}
+                honeypot={honeypot}
+                onHoneypotChange={setHoneypot}
+                submitBlocked={submitBlocked}
               />
             )}
             {step === 'done' && (
@@ -450,12 +498,16 @@ function ContactStep({
 // ─── Step 2: Details ──────────────────────────────────────────────────────────
 function DetailsStep({
   draft, onPatch, onBack, onSubmit, ok,
+  honeypot, onHoneypotChange, submitBlocked,
 }: {
   draft: SignupDraft;
   onPatch: (p: Partial<SignupDraft>) => void;
   onBack: () => void;
   onSubmit: () => void;
   ok: boolean;
+  honeypot: string;
+  onHoneypotChange: (v: string) => void;
+  submitBlocked: string | null;
 }) {
   return (
     <StepShell title="Almost done." italic="A few quick details to plan the week." onBack={onBack}>
@@ -535,6 +587,27 @@ function DetailsStep({
           />
         </div>
       </div>
+
+      {/* Honeypot — invisible to humans, irresistible to dumb bots.
+          Real users never see this field; bots auto-fill every input.
+          We use position:absolute off-screen instead of display:none
+          because some bots skip display:none fields. */}
+      <input
+        type="text"
+        name={HONEYPOT_FIELD_NAME}
+        tabIndex={-1}
+        autoComplete="off"
+        aria-hidden="true"
+        value={honeypot}
+        onChange={(e) => onHoneypotChange(e.target.value)}
+        style={HONEYPOT_HIDDEN_STYLE}
+      />
+      {submitBlocked && (
+        <div className="bg-sp-red-light border border-sp-red rounded-2xl p-4 flex items-start gap-3">
+          <AlertTriangle className="w-5 h-5 text-sp-red shrink-0 mt-0.5" />
+          <p className="text-sm text-ink leading-relaxed">{submitBlocked}</p>
+        </div>
+      )}
 
       <DuplicateWarning draft={draft} />
 

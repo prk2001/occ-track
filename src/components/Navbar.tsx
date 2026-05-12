@@ -70,6 +70,7 @@ export default function Navbar({ title }: NavbarProps) {
       ? [
           { label: 'Audit Log', path: '/audit-log', icon: 'audit' },
           { label: 'Outbox', path: '/outbox', icon: 'outbox' },
+          { label: 'Security Center', path: '/security', icon: 'security' },
         ]
       : []),
     { label: 'Settings', path: '/settings', icon: 'settings' },

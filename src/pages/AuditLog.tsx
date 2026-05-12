@@ -18,6 +18,7 @@ import {
 import type { AuditAction, AuditEvent } from '@/lib/auditLog';
 import { ROLE_CONFIG, timeAgo } from '@/data/mockData';
 import type { UserRole } from '@/data/mockData';
+import { useNoIndex } from '@/hooks/useNoIndex';
 
 /**
  * Audit Log viewer — Super Admin only.
@@ -31,6 +32,7 @@ import type { UserRole } from '@/data/mockData';
  * a leader takes a new action in another tab.
  */
 export default function AuditLog() {
+  useNoIndex();
   const { user, isSuperAdmin } = useAuth();
   // Read live: this re-renders whenever the underlying storage changes
   // through this hook (other tabs require manual refresh — fine for demo).

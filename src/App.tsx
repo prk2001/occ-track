@@ -17,6 +17,7 @@ import MySignup from '@/pages/MySignup';
 import WelcomeTable from '@/pages/WelcomeTable';
 import Badges from '@/pages/Badges';
 import AuditLog from '@/pages/AuditLog';
+import SecurityCenter from '@/pages/SecurityCenter';
 import Outbox from '@/pages/Outbox';
 import States from '@/pages/States';
 import Settings from '@/pages/Settings';
@@ -44,6 +45,7 @@ export default function App() {
         <Route path="/badges" element={<Badges />} />
         <Route path="/audit-log" element={<AuditLog />} />
         <Route path="/outbox" element={<Outbox />} />
+        <Route path="/security" element={<SecurityCenter />} />
         <Route path="/states" element={<States />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="*" element={<NotFound />} />
