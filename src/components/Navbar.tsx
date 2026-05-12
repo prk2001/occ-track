@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { ROLE_CONFIG, timeAgo } from '@/data/mockData';
 import type { UserRole } from '@/data/mockData';
 import Logo, { Mark } from '@/components/Logo';
+import LanguageToggle from '@/components/LanguageToggle';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import {
   inboxForRecipient,
@@ -94,6 +95,7 @@ export default function Navbar({ title }: NavbarProps) {
           <h1 className="font-display text-lg font-medium text-ink leading-tight truncate tracking-tight">{title}</h1>
         </div>
         <div className="flex items-center gap-2">
+          <LanguageToggle variant="navbar" />
           <button
             onClick={() => setNotifOpen(true)}
             className="touch-target flex items-center justify-center relative"

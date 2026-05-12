@@ -38,6 +38,9 @@ import {
   stampSignupThrottle,
 } from '@/lib/security';
 import TurnstileStub from '@/components/TurnstileStub';
+import { TrustStrip, ChristmasPattern } from '@/components/BrandFlair';
+import { useTranslation } from '@/lib/i18n';
+import LanguageToggle from '@/components/LanguageToggle';
 
 // Note on roles: in real OCC practice, volunteers sign up just to *serve* —
 // the Central Drop-off Leader assigns specific roles (Greeter, Counter,
@@ -318,6 +321,7 @@ function StepBar({ step }: { step: Step }) {
 
 // ─── Intro ───────────────────────────────────────────────────────────────────
 function IntroStep({ onStart }: { onStart: () => void }) {
+  const { t } = useTranslation();
   // Read the live admin-managed schedule + day blocks so the volunteer sees
   // exactly what the CDO has set up. Falls back to defaults if the admin
   // hasn't customized anything yet.
@@ -334,32 +338,39 @@ function IntroStep({ onStart }: { onStart: () => void }) {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -12 }}
       transition={heroTransition}
-      className="space-y-6 text-center"
+      className="relative space-y-6 text-center"
     >
-      <div className="flex justify-center">
+      <ChristmasPattern />
+      <div className="relative flex justify-center">
         <ShoeboxStack size={140} />
       </div>
 
       <div className="space-y-3">
+        <div className="flex justify-center">
+          <TrustStrip />
+        </div>
+        <div className="flex justify-center">
+          <LanguageToggle variant="hero" />
+        </div>
         <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-sp-red flex items-center justify-center gap-2">
           <Sparkles className="w-3 h-3" />
-          Volunteer · Collection Week 2026
+          {t('signup.intro.kicker')}
           <Sparkles className="w-3 h-3" />
         </p>
         <h1 className="font-display text-[clamp(2rem,6vw,3.25rem)] font-medium text-ink leading-[1.05] tracking-tight">
-          Yes, we&apos;d love your help.
-          <span className="font-display-italic block text-sp-red mt-1">Thank you for showing up.</span>
+          {t('signup.intro.heroH1')}
+          <span className="font-display-italic block text-sp-red mt-1 sp-underline">{t('signup.intro.heroSub')}</span>
         </h1>
         <p className="text-sm text-ink-light italic max-w-md mx-auto leading-relaxed">
-          {formatWeek(COLLECTION_WEEK_START, COLLECTION_WEEK_END)}. A few minutes here puts your name
-          on the team — we&apos;ll follow up with details a week before.
+          {t('signup.intro.bodyP', { week: formatWeek(COLLECTION_WEEK_START, COLLECTION_WEEK_END) })}
         </p>
+        <p className="in-his-name text-xs pt-1">{t('brand.tagline')}</p>
       </div>
 
       <div className="grid grid-cols-3 gap-3 max-w-md mx-auto pt-2">
-        <Fact value="~3 hrs" label="Avg shift" />
-        <Fact value={`${openCount}/${COLLECTION_DAYS.length}`} label="Days open" />
-        <Fact value="0 cost" label="Just your time" />
+        <Fact value={t('signup.intro.fact.shiftValue')} label={t('signup.intro.fact.shift')} />
+        <Fact value={`${openCount}/${COLLECTION_DAYS.length}`} label={t('signup.intro.fact.days')} />
+        <Fact value={t('signup.intro.fact.costValue')} label={t('signup.intro.fact.cost')} />
       </div>
 
       {/* Week schedule preview — pulls live data from /signups admin */}
@@ -371,13 +382,13 @@ function IntroStep({ onStart }: { onStart: () => void }) {
         className="group w-full h-16 bg-lime hover:bg-lime-dark transition-colors text-occ-green-dark hover:text-white text-lg font-display rounded-2xl flex items-center justify-center gap-3 shadow-card"
       >
         <HandHeart className="w-5 h-5" />
-        Sign me up
+        {t('signup.intro.cta')}
         <span className="ml-1 w-9 h-9 rounded-full bg-occ-green-dark flex items-center justify-center">
           <ChevronRight className="w-5 h-5 text-white" />
         </span>
       </motion.button>
       <p className="text-[11px] text-ink-light/80">
-        Already volunteering this week? <Link to="/login" className="font-semibold text-sp-red underline">Sign in instead</Link>
+        {t('signup.intro.alreadyVolunteer')} <Link to="/login" className="font-semibold text-sp-red underline">{t('signup.intro.signIn')}</Link>
       </p>
     </motion.section>
   );

@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Routes, Route } from 'react-router';
 import { AuthProvider } from '@/hooks/useAuth';
+import { I18nProvider } from '@/lib/i18n';
 import { startTamperWatcher } from '@/lib/tamperDetection';
 import Dashboard from '@/pages/Dashboard';
 import Login from '@/pages/Login';
@@ -33,6 +34,7 @@ export default function App() {
     return stop;
   }, []);
   return (
+    <I18nProvider>
     <AuthProvider>
       <Routes>
         <Route path="/" element={<Dashboard />} />
@@ -59,5 +61,6 @@ export default function App() {
         <Route path="*" element={<NotFound />} />
       </Routes>
     </AuthProvider>
+    </I18nProvider>
   );
 }
