@@ -1,7 +1,8 @@
 # OCC Track — Master TODO
 
-**Last audit:** Phase 28 complete + dev preview live at
-`https://attendance-generations-heading-stating.trycloudflare.com`.
+**Last audit:** Phase 29 complete (Spanish coverage + GitHub publish).
+Dev preview at `https://attendance-generations-heading-stating.trycloudflare.com`,
+source at `https://github.com/prk2001/occ-track`.
 
 This document inventories everything the prototype already has, then maps
 every remaining gap a real Samaritan's Purse / Operation Christmas Child
@@ -15,12 +16,14 @@ engineer-week of focused work; priorities reflect what blocks production.
 | Metric | Count |
 |---|---|
 | Routes | 23 |
-| Components | 80 |
+| Components | 81 |
 | Lib + hooks | 14 |
-| TypeScript LOC | ~12,000 |
-| Commits since Phase 14 | 12 |
+| TypeScript LOC | ~12,200 |
+| Commits since Phase 14 | 15 |
 | Tests | **0** (Vitest configured but unused) |
 | Real backend | **0** (everything is localStorage) |
+| Public GitHub URL | https://github.com/prk2001/occ-track |
+| Spanish coverage | **Complete** for all public surfaces (Phase 29) |
 
 ---
 
@@ -80,6 +83,19 @@ engineer-week of focused work; priorities reflect what blocks production.
 - [x] **Live dev preview** at `https://attendance-generations-heading-stating.trycloudflare.com` (ephemeral, restart on reboot).
 
 ---
+
+## Recent completions (since the last TODO refresh)
+
+- **Phase 29 — Spanish coverage gap closed.** All public surfaces now use `t()`:
+  ContactStep, DetailsStep, DoneStep, MagicLinkCard, MySignup, Welcome Table
+  kiosk (with a navbar-variant LanguageToggle inside the kiosk), LockoutPage
+  with locale-aware pluralization. Dictionary expanded with ~12 new keys.
+- **Phase 29 — GitHub publication.** Repo is now public at
+  https://github.com/prk2001/occ-track. Real README replaces the Vite template
+  default. Inventories every phase + points to TODO.md for the gap list.
+- **Live preview** still at `https://attendance-generations-heading-stating.trycloudflare.com`
+  (ephemeral); for a stable URL, deploy via Vercel/Netlify from the GitHub
+  repo (config files at `vercel.json` + `netlify.toml` are pre-wired).
 
 ## Part 2 — What still needs to be done
 
@@ -141,16 +157,19 @@ between prototype and production.
 
 ### P1 — Strong recommendations before scale
 
-#### P1.1 Spanish i18n coverage gaps
-The `i18n.tsx` dictionary has keys for the full signup/kiosk surface, but
-only `IntroStep` actually consumes them. Wire up the rest:
-- [ ] **Contact step** of /signup → use `t('signup.contact.*')` keys. _S · 1hr._
-- [ ] **Details step** of /signup → use `t('signup.details.*')` keys including form field labels. _S · 2hr._
-- [ ] **Done step** of /signup → use `t('signup.done.*')` keys including magic-link card. _S · 1hr._
-- [ ] **MySignup self-edit** → use `t('mysignup.*')` keys. _S · 1hr._
-- [ ] **Welcome Table kiosk** → use `t('kiosk.*')` keys (kiosks see Spanish-speaking volunteers most). _S · 1hr._
-- [ ] **Lockout pages** → use `t('lockout.*')` keys. _S · 30min._
+#### P1.1 Spanish i18n coverage — ✅ DONE (Phase 29)
+Originally the `i18n.tsx` dictionary had keys but only IntroStep consumed
+them. Phase 29 wired `useTranslation()` into every public-facing surface:
+- [x] **Contact step** of /signup → uses `t('signup.contact.*')` keys.
+- [x] **Details step** of /signup → uses `t('signup.details.*')` keys.
+- [x] **Done step** of /signup → uses `t('signup.done.*')` keys including magic-link card.
+- [x] **MySignup self-edit** → uses `t('mysignup.*')` keys.
+- [x] **Welcome Table kiosk** → uses `t('kiosk.*')` keys, plus a navbar LanguageToggle in the kiosk top-right.
+- [x] **Lockout pages** → uses `t('lockout.*')` keys with locale-aware pluralization (minute/minutes vs minuto/minutos).
+
+Still open:
 - [ ] **Additional languages** if needed for the OCC volunteer demographic: Korean, Vietnamese, Mandarin (large in West Coast OCC drives). _M · 2d per language._
+- [ ] **Admin pages translation** — `/signups`, `/audit-log`, `/outbox`, `/security`, `/settings`. Currently English-only (real CDO Leaders interface with SP HQ in English). _M · 2-3d per page._
 
 #### P1.2 Testing
 - [ ] **Unit tests** for `auditLog`, `outbox`, `security`, `tamperDetection`, `appMode`, `i18n`, `kioskPin` — pure functions, easy targets. _M · 3d._
@@ -246,7 +265,7 @@ If I were a PM allocating one engineer-week per sprint, the order would be:
 |---|---|---|
 | 1 | **P0.1 backend + P0.3 deployment** | Supabase + Vercel + custom domain. Move localStorage → DB. Real auth. |
 | 2 | **P0.2 compliance + P0.4 real email/SMS** | Privacy policy + ToS + Resend + Telnyx + Cloudflare WAF + Turnstile. |
-| 3 | **P1.1 i18n + P1.2 testing** | Full Spanish coverage. Unit + component tests. CI green. |
+| 3 | **P1.2 testing** (P1.1 i18n ✅ DONE) | Unit + component tests. CI green. |
 | 4 | **P1.3 docs + P2.2 a11y** | Admin/volunteer guides. WCAG AA pass. Performance pass. |
 
 Then start the P1.4 real-world feature list based on what SP-OCC leadership
