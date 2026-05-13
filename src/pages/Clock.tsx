@@ -385,7 +385,7 @@ function VolunteerStep({
                     <span className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-bg-card ${on ? 'bg-occ-green' : 'bg-ink-light/30'}`} />
                   </div>
                   <p className="font-display text-sm font-medium text-ink leading-tight mt-2 truncate">{v.name}</p>
-                  <p className="text-[10px] font-semibold uppercase tracking-wider mt-0.5" style={{ color: cfg.color }}>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider mt-0.5" style={{ color: cfg.textColor }}>
                     {cfg.label}
                   </p>
                   <p className="text-[10px] text-ink-light mt-1">{on ? 'On site' : 'Tap to clock in'}</p>
@@ -497,7 +497,7 @@ function ActionStep({
           {volunteer.name.charAt(0)}
         </div>
         <h2 className="font-display text-3xl font-medium text-ink leading-none">{volunteer.name}</h2>
-        <p className="text-[11px] font-bold uppercase tracking-[0.2em]" style={{ color: cfg.color }}>
+        <p className="text-[11px] font-bold uppercase tracking-[0.2em]" style={{ color: cfg.textColor }}>
           {cfg.label} · {cfg.description}
         </p>
         <p className="text-xs text-ink-light italic">{location.name}</p>

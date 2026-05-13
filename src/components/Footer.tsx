@@ -25,10 +25,14 @@ export default function Footer() {
 
         <div className="pt-3 border-t border-border-custom space-y-1">
           <p className="text-[11px] text-slate flex items-center justify-center gap-1.5">
-            <MapPin className="w-3 h-3 text-slate-light" />
+            <MapPin className="w-3 h-3 text-slate" aria-hidden="true" />
             Samaritan&apos;s Purse · 801 Bamboo Road · Boone, NC 28607
           </p>
-          <p className="text-[10px] text-slate-light">
+          {/* © line was text-slate-light (#94A3B8 = 3.27:1 contrast on white,
+              fails WCAG 1.4.3 AA for normal text). Promoted to text-slate
+              (#475569 = 7.65:1) so screen-magnifier + low-vision users can
+              read attribution. */}
+          <p className="text-[10px] text-slate">
             © {year} Samaritan&apos;s Purse. All rights reserved.
           </p>
         </div>

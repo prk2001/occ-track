@@ -1,11 +1,10 @@
-import { memo, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
-  ClipboardList, Users, Lock, Unlock, CalendarOff, Plus, X, Phone, Mail,
-  CheckCircle2, AlertCircle, Shield, Sparkles, ChevronRight, MessageCircle, Trash2,
-  Pencil, Search, Mail as MailIcon, RotateCcw, Printer, Download, ArrowDownAZ, ArrowDown01,
-  UserCheck, UserX, Eye, EyeOff, Send, KeyRound,
+  ClipboardList, Lock, Unlock, Sparkles, ChevronRight,
+  Search, Mail as MailIcon, RotateCcw, Printer, Download, ArrowDownAZ, ArrowDown01,
+  UserCheck, Eye, EyeOff, Upload,
 } from 'lucide-react';
 import Layout from '@/components/Layout';
 import { useAuth } from '@/hooks/useAuth';
@@ -15,18 +14,24 @@ import {
   COLLECTION_DAY,
   DEFAULT_DAY_TIMES,
   getLocationById,
-  timeAgo,
 } from '@/data/mockData';
 import type { DayBlock, StoredSignup } from '@/data/mockData';
 import { findDuplicateSignups, signupInScopeForUser, DEFAULT_CDO_ID, LOCATIONS, defaultTokenExpiry } from '@/data/mockData';
 import { logAuditEvent } from '@/lib/auditLog';
-import { buildArrivalConfirmation, sendMessage } from '@/lib/outbox';
+import { sendMessage, buildArrivalConfirmation } from '@/lib/outbox';
 import BulkImportDialog from '@/components/BulkImportDialog';
 import TransferDialog from '@/components/TransferDialog';
-import { Upload, ArrowRightLeft } from 'lucide-react';
 import { logSecuritySignal } from '@/lib/security';
 import { useNoIndex } from '@/hooks/useNoIndex';
 import { getFirstName } from '@/lib/name';
+import { useTranslation } from '@/lib/i18n';
+
+// Extracted sub-components (Phase 34a refactor).
+import { DayCard } from '@/pages/Signups/DayCard';
+import { SignupCard } from '@/pages/Signups/SignupCard';
+import { AttendanceSection } from '@/pages/Signups/AttendanceSection';
+import { BlockDaySheet } from '@/pages/Signups/BlockDaySheet';
+import { NotForYourRoleCard } from '@/pages/Signups/NotForYourRoleCard';
 
 // Seed: Saturday is often covered by a youth group. Demos the blocked
 // state on first load; user can clear via Reopen.
@@ -41,6 +46,7 @@ const SEED_BLOCKS: DayBlock[] = [
 
 export default function Signups() {
   useNoIndex();
+  const { t } = useTranslation();
   const { user, isRegionalAdmin } = useAuth();
   const cdoLabel = getLocationById('cdo1')?.name ?? 'Central Drop-off';
   const [signups, setSignups] = useLocalStorage<StoredSignup[]>('occ:signups', []);
@@ -378,7 +384,7 @@ export default function Signups() {
         <header className="flex items-start justify-between gap-3">
           <div className="space-y-2 pt-1">
             <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-sp-red">
-              Signups & Schedule
+              {t('signupsAdmin.kicker')}
             </p>
             {isRegionalAdmin ? (
               <>
@@ -395,7 +401,7 @@ export default function Signups() {
             ) : (
               <>
                 <h1 className="font-display text-3xl sm:text-4xl text-ink leading-[1.05] tracking-tight">
-                  Restricted area.
+                  {t('signupsAdmin.locked.title')}
                   <span className="font-display-italic block text-sp-red mt-1">
                     Volunteer information is private.
                   </span>
@@ -669,292 +675,6 @@ export default function Signups() {
 }
 
 // ─── Day card ───────────────────────────────────────────────────────────────
-function DayCard({
-  day, time, block, isToday, isPast, isEditingTime,
-  onBlock, onReopen, onStartEditTime, onSaveTime, onCancelEditTime,
-}: {
-  day: typeof COLLECTION_DAYS[number];
-  time: string;
-  block?: DayBlock;
-  isToday: boolean;
-  isPast: boolean;
-  isEditingTime: boolean;
-  onBlock: () => void;
-  onReopen: () => void;
-  onStartEditTime: () => void;
-  onSaveTime: (value: string) => void;
-  onCancelEditTime: () => void;
-}) {
-  const blocked = !!block;
-  const [draftTime, setDraftTime] = useState(time);
-  return (
-    <motion.div
-      variants={{ hidden: { opacity: 0, y: 8 }, show: { opacity: 1, y: 0 } }}
-      className={`relative bg-bg-card rounded-2xl border p-4 transition-all ${
-        blocked ? 'border-gold/40 bg-gold-light/30'
-          : isToday ? 'border-sp-red/40'
-          : 'border-border-custom hover:border-occ-green/40'
-      }`}
-    >
-      <div className="flex items-start justify-between mb-2">
-        <div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-ink-light">
-            {day.weekday}
-          </p>
-          <p className="font-display text-3xl text-ink tabular-nums leading-none mt-0.5">
-            {day.monthDay}
-          </p>
-          <p className="text-[10px] text-ink-light mt-0.5 font-medium">Nov 2026</p>
-        </div>
-        {isToday && (
-          <span className="text-[9px] font-bold uppercase tracking-wider text-sp-red bg-white px-2 py-0.5 rounded-full border border-sp-red flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-sp-red animate-pulse-live" />
-            Today
-          </span>
-        )}
-        {isPast && !isToday && (
-          <span className="text-[9px] font-bold uppercase tracking-wider text-ink-light/60">
-            Past
-          </span>
-        )}
-      </div>
-
-      {isEditingTime ? (
-        <div className="mb-3 flex items-center gap-1.5">
-          <input
-            autoFocus
-            value={draftTime}
-            onChange={(e) => setDraftTime(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') onSaveTime(draftTime);
-              if (e.key === 'Escape') onCancelEditTime();
-            }}
-            placeholder="e.g. 9 AM – 12 Noon"
-            className="flex-1 h-8 px-2 text-xs tabular-nums bg-bg-primary border border-sp-red rounded-lg focus:outline-none text-ink"
-          />
-          <button
-            onClick={() => onSaveTime(draftTime)}
-            className="px-2 h-8 bg-occ-green text-white text-[10px] font-bold rounded-lg uppercase tracking-wider"
-          >Save</button>
-          <button
-            onClick={onCancelEditTime}
-            className="px-2 h-8 text-[10px] font-bold text-ink-light uppercase tracking-wider"
-          >Cancel</button>
-        </div>
-      ) : (
-        <button
-          onClick={onStartEditTime}
-          disabled={isPast}
-          className="text-xs text-ink-light tabular-nums mb-3 hover:text-sp-red transition-colors flex items-center gap-1 group disabled:hover:text-ink-light disabled:cursor-default"
-        >
-          <span>{time}</span>
-          {!isPast && (
-            <Pencil className="w-2.5 h-2.5 opacity-0 group-hover:opacity-100 transition-opacity" />
-          )}
-        </button>
-      )}
-
-      {blocked ? (
-        <>
-          <div className="bg-white rounded-xl border border-gold/30 px-3 py-2 mb-3">
-            <p className="text-[9px] font-bold uppercase tracking-wider text-gold mb-0.5 flex items-center gap-1">
-              <CalendarOff className="w-2.5 h-2.5" />
-              Covered by
-            </p>
-            <p className="text-sm font-semibold text-ink leading-tight">{block.coveredBy}</p>
-            {block.note && (
-              <p className="text-[10px] text-ink-light italic mt-1">{block.note}</p>
-            )}
-          </div>
-          <button
-            onClick={onReopen}
-            disabled={isPast}
-            className="w-full h-9 text-xs font-semibold text-gold hover:text-sp-red flex items-center justify-center gap-1.5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-          >
-            <Unlock className="w-3 h-3" />
-            Reopen this day
-          </button>
-        </>
-      ) : (
-        <>
-          <p className="text-[10px] font-bold uppercase tracking-wider text-occ-green mb-3 flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-occ-green" />
-            Open for signups
-          </p>
-          <button
-            onClick={onBlock}
-            disabled={isPast}
-            className="w-full h-9 bg-bg-primary border border-border-custom text-ink text-xs font-semibold rounded-lg hover:bg-gold-light hover:border-gold hover:text-gold transition-all flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            <Lock className="w-3 h-3" />
-            Block out this day
-          </button>
-        </>
-      )}
-    </motion.div>
-  );
-}
-
-// ─── Signup card ────────────────────────────────────────────────────────────
-// Memoized — Signups admin can show 100+ rows; every parent state
-// change (search, sort, PII toggle, attendance change) previously
-// re-rendered every card. memo + reference-stable handlers from
-// useCallback cuts this to "only re-render rows whose data changed".
-// Audit P1.22.
-interface SignupCardProps {
-  signup: StoredSignup;
-  isDuplicate?: boolean;
-  isPiiBlurred?: boolean;
-  onToggleReveal?: () => void;
-  onResendLink?: () => void;
-  onReissueLink?: () => void;
-  onTransfer?: () => void;
-  onRemove: () => void;
-}
-
-const SignupCard = memo(function SignupCard({
-  signup, isDuplicate, isPiiBlurred, onToggleReveal, onResendLink, onReissueLink, onTransfer, onRemove,
-}: SignupCardProps) {
-  const initials = signup.name.split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase();
-  // Tailwind doesn't easily blur text without affecting layout. We use
-  // a CSS filter so the row keeps its dimensions; hover reveals to make
-  // the admin's intent explicit (no accidental drive-by reads).
-  const blurClass = isPiiBlurred
-    ? 'blur-sm select-none hover:blur-none transition-all cursor-pointer'
-    : '';
-  return (
-    <motion.li
-      variants={{
-        hidden: { opacity: 0, y: 12 },
-        show: { opacity: 1, y: 0, transition: { duration: 0.3, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] } },
-      }}
-      className="bg-bg-card rounded-2xl border border-border-custom p-4 hover:shadow-card transition-shadow"
-    >
-      <div className="flex items-start gap-3">
-        <div className="w-12 h-12 rounded-full bg-sp-red text-white flex items-center justify-center font-display text-lg leading-none shrink-0">
-          {initials || '?'}
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0">
-              <h3 className="font-display text-base text-ink truncate leading-tight">{signup.name}</h3>
-              <p className="text-[11px] text-ink-light mt-0.5">Signed up {timeAgo(signup.submittedAt)}</p>
-            </div>
-            <div className="flex flex-col items-end gap-1 shrink-0">
-              {signup.firstTime && (
-                <span className="text-[9px] font-bold uppercase tracking-wider text-lime-dark bg-lime-light px-2 py-0.5 rounded-full whitespace-nowrap">
-                  First-Timer
-                </span>
-              )}
-              {signup.lastEditedBy === 'self' && signup.lastEditedAt && (
-                <span
-                  className="text-[9px] font-bold uppercase tracking-wider text-occ-green bg-occ-green-light px-2 py-0.5 rounded-full whitespace-nowrap"
-                  title={`Volunteer self-edited via magic link · ${new Date(signup.lastEditedAt).toLocaleString()}`}
-                >
-                  Self-edited · {timeAgo(signup.lastEditedAt)}
-                </span>
-              )}
-              {isDuplicate && (
-                <span
-                  className="text-[9px] font-bold uppercase tracking-wider text-gold bg-gold-light px-2 py-0.5 rounded-full whitespace-nowrap"
-                  title="Email or phone matches another signup — possible duplicate"
-                >
-                  ⚠ Duplicate
-                </span>
-              )}
-            </div>
-          </div>
-
-          <div
-            className="mt-3 grid grid-cols-1 gap-1.5 text-[11px]"
-            onClick={isPiiBlurred ? onToggleReveal : undefined}
-          >
-            <a
-              href={isPiiBlurred ? undefined : `tel:${signup.phone}`}
-              className={`flex items-center gap-1.5 text-ink-light hover:text-sp-red transition-colors tabular-nums ${blurClass}`}
-              onClick={(e) => { if (isPiiBlurred) e.preventDefault(); }}
-            >
-              <Phone className="w-3 h-3 shrink-0 not-blurred" />
-              <span>{signup.phone}</span>
-            </a>
-            <a
-              href={isPiiBlurred ? undefined : `mailto:${signup.email}`}
-              className={`flex items-center gap-1.5 text-ink-light hover:text-sp-red transition-colors truncate ${blurClass}`}
-              onClick={(e) => { if (isPiiBlurred) e.preventDefault(); }}
-            >
-              <Mail className="w-3 h-3 shrink-0" />
-              <span className="truncate">{signup.email}</span>
-            </a>
-          </div>
-
-          {(signup.shirtSize || signup.emergencyName || signup.notes) && (
-            <div className="mt-3 pt-3 border-t border-border-custom/60 space-y-2 text-[11px] text-ink-light">
-              {signup.shirtSize && (
-                <p><span className="font-semibold text-ink uppercase tracking-wider text-[9px]">Shirt:</span> {signup.shirtSize}</p>
-              )}
-              {signup.emergencyName && (
-                <p
-                  className={`flex items-start gap-1.5 ${blurClass}`}
-                  onClick={isPiiBlurred ? onToggleReveal : undefined}
-                >
-                  <Shield className="w-3 h-3 shrink-0 mt-0.5" />
-                  <span><span className="font-semibold text-ink">{signup.emergencyName}</span>{signup.emergencyPhone && ` · ${signup.emergencyPhone}`}</span>
-                </p>
-              )}
-              {signup.notes && (
-                <p className="flex items-start gap-1.5 italic">
-                  <MessageCircle className="w-3 h-3 shrink-0 mt-0.5" />
-                  <span>{signup.notes}</span>
-                </p>
-              )}
-            </div>
-          )}
-        </div>
-        <div className="flex flex-col gap-1 shrink-0 print-hide">
-          {onResendLink && signup.editToken && (
-            <button
-              onClick={onResendLink}
-              className="touch-target text-ink-light/60 hover:text-occ-green transition-colors"
-              aria-label={`Resend edit link to ${signup.name}`}
-              title="Resend their existing magic link by email"
-            >
-              <Send className="w-4 h-4" />
-            </button>
-          )}
-          {onReissueLink && signup.editToken && (
-            <button
-              onClick={onReissueLink}
-              className="touch-target text-ink-light/60 hover:text-gold transition-colors"
-              aria-label={`Reissue edit link for ${signup.name}`}
-              title="Reissue a NEW magic link (revokes old one) — for security incidents"
-            >
-              <KeyRound className="w-4 h-4" />
-            </button>
-          )}
-          {onTransfer && (
-            <button
-              onClick={onTransfer}
-              className="touch-target text-ink-light/60 hover:text-blue-accent transition-colors"
-              aria-label={`Transfer ${signup.name} to another CDO`}
-              title="Transfer this volunteer to another Central Drop-off"
-            >
-              <ArrowRightLeft className="w-4 h-4" />
-            </button>
-          )}
-          <button
-            onClick={onRemove}
-            className="touch-target text-ink-light/60 hover:text-sp-red transition-colors"
-            aria-label={`Remove ${signup.name}`}
-            title="Remove this signup entirely"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-    </motion.li>
-  );
-});
-
 // ─── Sort chip ──────────────────────────────────────────────────────────────
 function SortChip({ active, onClick, label, icon }: { active: boolean; onClick: () => void; label: string; icon: React.ReactNode }) {
   return (
@@ -985,274 +705,3 @@ function StatTile({ icon: Icon, label, value, bg, color }: { icon: typeof Clipbo
 // Live tally of who's arrived at the welcome table today. The Greeter taps
 // each volunteer as they walk in. Default open when nobody has arrived yet
 // (i.e., the start of the day); collapsible once a few are marked.
-function AttendanceSection({
-  signups, onMarkArrived, onUnmarkArrived, todayISODate,
-}: {
-  signups: StoredSignup[];
-  onMarkArrived: (id: string) => void;
-  onUnmarkArrived: (id: string) => void;
-  todayISODate: string;
-}) {
-  // Sort: not-yet-arrived first (so greeter can tap quickly), then arrived
-  // in descending arrival order (most recent on top).
-  const sorted = [...signups].sort((a, b) => {
-    const aArrived = !!a.arrivedAt;
-    const bArrived = !!b.arrivedAt;
-    if (aArrived !== bArrived) return aArrived ? 1 : -1;
-    if (aArrived && bArrived) {
-      return (b.arrivedAt ?? '').localeCompare(a.arrivedAt ?? '');
-    }
-    return a.name.localeCompare(b.name);
-  });
-  const arrivedCount = signups.filter(
-    (s) => s.arrivedAt && s.arrivedAt.slice(0, 10) === todayISODate,
-  ).length;
-  const pendingCount = signups.length - arrivedCount;
-
-  return (
-    <section className="print-hide">
-      <header className="mb-3 flex items-center justify-between gap-3 flex-wrap">
-        <div>
-          <h2 className="font-display text-xl text-ink leading-tight flex items-center gap-2">
-            <UserCheck className="w-5 h-5 text-occ-green" />
-            Welcome Table
-          </h2>
-          <p className="text-xs text-ink-light italic mt-1">
-            Tap each volunteer as they arrive. {arrivedCount} of {signups.length} checked in today.
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Link
-            to="/welcome-table"
-            className="text-[10px] font-bold uppercase tracking-wider text-sp-red hover:underline flex items-center gap-1"
-          >
-            iPad mode
-            <ChevronRight className="w-3 h-3" />
-          </Link>
-          <Link
-            to="/clock"
-            className="text-[10px] font-bold uppercase tracking-wider text-ink-light hover:text-sp-red flex items-center gap-1"
-          >
-            Clock kiosk
-            <ChevronRight className="w-3 h-3" />
-          </Link>
-        </div>
-      </header>
-      <div className="bg-bg-card rounded-2xl border border-border-custom overflow-hidden">
-        {/* Progress bar — visual gauge of attendance rate */}
-        <div className="h-1.5 bg-bg-primary w-full overflow-hidden">
-          <motion.div
-            initial={{ width: 0 }}
-            animate={{ width: `${signups.length === 0 ? 0 : (arrivedCount / signups.length) * 100}%` }}
-            transition={{ duration: 0.5, ease: 'easeOut' }}
-            className="h-full bg-occ-green"
-          />
-        </div>
-        <ul className="divide-y divide-border-custom/60 max-h-96 overflow-y-auto">
-          {sorted.map((s) => {
-            const arrived = !!s.arrivedAt && s.arrivedAt.slice(0, 10) === todayISODate;
-            const arrivedTime = s.arrivedAt
-              ? new Date(s.arrivedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
-              : null;
-            return (
-              <li
-                key={s.id}
-                className={`flex items-center gap-3 px-4 py-2.5 ${
-                  arrived ? 'bg-occ-green-light/40' : ''
-                }`}
-              >
-                <div
-                  className={`w-9 h-9 rounded-full flex items-center justify-center font-display text-sm leading-none shrink-0 ${
-                    arrived ? 'bg-occ-green text-white' : 'bg-sp-red text-white'
-                  }`}
-                >
-                  {arrived ? <CheckCircle2 className="w-4 h-4" /> : s.name.charAt(0).toUpperCase()}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-ink truncate">{s.name}</p>
-                  <p className="text-[11px] text-ink-light truncate">
-                    {arrived ? (
-                      <>
-                        Arrived <span className="font-semibold text-occ-green">{arrivedTime}</span>
-                      </>
-                    ) : (
-                      <>
-                        <span className="tabular-nums">{s.phone}</span>
-                        {s.firstTime ? <span className="text-lime-dark"> · First-Timer</span> : null}
-                      </>
-                    )}
-                  </p>
-                </div>
-                {arrived ? (
-                  <button
-                    onClick={() => onUnmarkArrived(s.id)}
-                    className="h-9 px-3 bg-bg-primary border border-border-custom hover:border-sp-red hover:text-sp-red text-ink-light text-xs font-bold rounded-lg flex items-center gap-1.5 uppercase tracking-wider transition-all"
-                    title="Undo arrival"
-                  >
-                    <UserX className="w-3 h-3" />
-                    Undo
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => onMarkArrived(s.id)}
-                    className="h-9 px-3 bg-lime hover:bg-lime-dark text-occ-green-dark hover:text-white text-xs font-bold rounded-lg flex items-center gap-1.5 uppercase tracking-wider transition-colors"
-                  >
-                    <UserCheck className="w-3 h-3" />
-                    Arrived
-                  </button>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-        {pendingCount === 0 && signups.length > 0 && (
-          <div className="p-4 bg-occ-green-light/50 text-center border-t border-border-custom/60">
-            <p className="text-sm font-display text-occ-green-dark">
-              <CheckCircle2 className="w-4 h-4 inline -mt-0.5 mr-1" />
-              Everyone&apos;s here.
-            </p>
-            <p className="text-[11px] text-ink-light italic mt-0.5">Full house — go pack some boxes.</p>
-          </div>
-        )}
-      </div>
-    </section>
-  );
-}
-
-// ─── Block-day bottom sheet ─────────────────────────────────────────────────
-function BlockDaySheet({
-  date, time, onCancel, onSave,
-}: {
-  date: string;
-  time: string;
-  onCancel: () => void;
-  onSave: (coveredBy: string, note: string) => void;
-}) {
-  const [coveredBy, setCoveredBy] = useState('');
-  const [note, setNote] = useState('');
-  const day = COLLECTION_DAYS.find((d) => d.date === date);
-  const canSave = coveredBy.trim().length > 0;
-
-  return (
-    <>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-navy/50 z-50"
-        onClick={onCancel}
-      />
-      <motion.div
-        initial={{ y: '100%' }}
-        animate={{ y: 0 }}
-        exit={{ y: '100%' }}
-        transition={{ type: 'tween', duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-        className="fixed bottom-0 left-0 right-0 z-50 bg-bg-card rounded-t-3xl shadow-card-elevated max-h-[90vh] overflow-y-auto"
-      >
-        <div className="sticky top-0 bg-bg-card border-b border-border-custom px-5 py-4 flex items-center justify-between rounded-t-3xl">
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-sp-red">Block out this day</p>
-            <p className="font-display text-xl text-ink leading-none mt-1">
-              {day?.weekday}, Nov {day?.monthDay}
-            </p>
-            <p className="text-[11px] text-ink-light tabular-nums mt-0.5">{time}</p>
-          </div>
-          <button onClick={onCancel} className="touch-target text-ink-light hover:text-sp-red" aria-label="Cancel">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <div className="p-5 space-y-4">
-          <div className="bg-gold-light rounded-xl p-3 flex items-start gap-2 text-xs text-ink">
-            <AlertCircle className="w-4 h-4 text-gold shrink-0 mt-0.5" />
-            <p>
-              Blocking a day means it's <strong>already covered</strong> by a group, so individual
-              volunteers won't be needed. They can still sign up for other days.
-            </p>
-          </div>
-
-          <label className="block">
-            <span className="text-[11px] font-bold text-ink-light uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-              <Users className="w-3 h-3" /> Who's covering this day? <span className="text-sp-red">*</span>
-            </span>
-            <input
-              autoFocus
-              value={coveredBy}
-              onChange={(e) => setCoveredBy(e.target.value)}
-              placeholder="e.g. First Baptist Youth Group"
-              className="w-full h-12 px-4 bg-bg-primary border border-border-custom rounded-xl text-base text-ink placeholder:text-ink-light/50 focus:outline-none focus:border-sp-red transition-colors"
-            />
-          </label>
-
-          <label className="block">
-            <span className="text-[11px] font-bold text-ink-light uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-              <MessageCircle className="w-3 h-3" /> Note (optional)
-            </span>
-            <input
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder="e.g. 12 students + 3 chaperones"
-              className="w-full h-12 px-4 bg-bg-primary border border-border-custom rounded-xl text-sm text-ink placeholder:text-ink-light/50 focus:outline-none focus:border-sp-red transition-colors"
-            />
-          </label>
-
-          <button
-            onClick={() => canSave && onSave(coveredBy, note)}
-            disabled={!canSave}
-            className="w-full h-14 bg-lime hover:bg-lime-dark transition-colors text-occ-green-dark hover:text-white text-base font-display rounded-2xl flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed shadow-card"
-          >
-            <Lock className="w-4 h-4" />
-            Block out {day?.weekday} Nov {day?.monthDay}
-          </button>
-        </div>
-      </motion.div>
-    </>
-  );
-}
-
-// ─── Role gate explainer ────────────────────────────────────────────────────
-function NotForYourRoleCard({ role }: { role: string | null }) {
-  const backTo =
-    role === 'greeter' ? '/checkin'
-    : role === 'do_leader' ? '/totals'
-    : role === 'cdo_leader' ? '/'
-    : '/';
-  const backLabel =
-    role === 'greeter' ? 'Back to Check-In'
-    : role === 'do_leader' ? 'Back to My Totals'
-    : 'Back to Dashboard';
-  return (
-    <div className="bg-bg-card rounded-2xl border border-border-custom overflow-hidden">
-      <div className="bg-gradient-to-br from-sp-red-light to-bg-primary px-5 py-4 flex items-center gap-3 border-b border-border-custom">
-        <ClipboardList className="w-6 h-6 text-sp-red" />
-        <div>
-          <h2 className="font-display text-base text-ink">Volunteer information is private.</h2>
-          <p className="text-[11px] text-ink-light mt-0.5 italic">Restricted to Samaritan's Purse leadership.</p>
-        </div>
-      </div>
-      <div className="p-5 space-y-3 text-sm text-ink-light leading-relaxed">
-        <p>
-          Individual volunteer contact information — names, phone numbers, emails,
-          emergency contacts — is only visible to <strong className="text-ink">Super
-          Admin, SP Admin, and Regional Admin</strong> roles. This protects the
-          privacy of everyone who signs up to serve.
-        </p>
-        <p>
-          If you need to coordinate volunteers for your location, contact your
-          Regional Office. They'll route the right names to your team.
-        </p>
-        <div className="pt-1">
-          <Link
-            to={backTo}
-            className="inline-flex h-11 px-5 bg-sp-red text-white text-sm font-semibold rounded-xl items-center justify-center hover:bg-sp-red-dark transition-colors"
-          >
-            {backLabel}
-          </Link>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Unused but exported to prevent dead-import warnings if someone re-imports.
-export const _UNUSED_ICONS = { CheckCircle2, Plus };

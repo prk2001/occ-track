@@ -289,7 +289,9 @@ function VolunteerCard({ volunteer, checkedIn, onToggle }: { volunteer: Voluntee
           <h3 className="font-display text-base font-medium text-ink truncate leading-tight">{volunteer.name}</h3>
           <span
             className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full mt-1"
-            style={{ color: cfg.color }}
+            // textColor (AA-safe darker variant); cfg.color stays bright
+            // on the dot which has its own background.
+            style={{ color: cfg.textColor }}
           >
             <span className="w-1 h-1 rounded-full" style={{ backgroundColor: cfg.color }} />
             {cfg.label}

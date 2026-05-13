@@ -446,16 +446,20 @@ export function getVolunteersForLocation(locationId: string): Volunteer[] {
   return VOLUNTEERS.filter((v) => v.locationId === locationId);
 }
 
+// `color` = brand accent for icon dots on tinted backgrounds.
+// `textColor` = darker AA-compliant variant for small label text on white
+// (gold/sky brand colors fail WCAG AA on white at <3:1; darker variants
+// pass at >4.5:1). Audit P1.39 / Phase 34b a11y fix.
 export const ROLE_CONFIG: Record<
   UserRole,
-  { label: string; color: string; bgColor: string; description: string }
+  { label: string; color: string; textColor: string; bgColor: string; description: string }
 > = {
-  super_admin: { label: 'Super Admin', color: '#C8102E', bgColor: '#FDE8EB', description: 'National HQ — Samaritan\'s Purse' },
-  admin: { label: 'SP Admin', color: '#7C3AED', bgColor: '#F3EEFD', description: 'National oversight' },
-  regional: { label: 'Regional Admin', color: '#2563EB', bgColor: '#EFF6FF', description: 'Regional oversight' },
-  cdo_leader: { label: 'CDO Leader', color: '#1A6B3C', bgColor: '#E6F5EC', description: 'Central Drop-off Leader' },
-  do_leader: { label: 'Drop-off Leader', color: '#D97706', bgColor: '#FEF3C7', description: 'Drop-off Leader' },
-  greeter: { label: 'Greeter', color: '#0EA5E9', bgColor: '#E0F2FE', description: 'Greeter' },
+  super_admin: { label: 'Super Admin', color: '#C8102E', textColor: '#A00D24', bgColor: '#FDE8EB', description: 'National HQ — Samaritan\'s Purse' },
+  admin: { label: 'SP Admin', color: '#7C3AED', textColor: '#5B21B6', bgColor: '#F3EEFD', description: 'National oversight' },
+  regional: { label: 'Regional Admin', color: '#2563EB', textColor: '#1D4ED8', bgColor: '#EFF6FF', description: 'Regional oversight' },
+  cdo_leader: { label: 'CDO Leader', color: '#1A6B3C', textColor: '#0F3D14', bgColor: '#E6F5EC', description: 'Central Drop-off Leader' },
+  do_leader: { label: 'Drop-off Leader', color: '#D97706', textColor: '#92400E', bgColor: '#FEF3C7', description: 'Drop-off Leader' },
+  greeter: { label: 'Greeter', color: '#0EA5E9', textColor: '#0369A1', bgColor: '#E0F2FE', description: 'Greeter' },
 };
 
 export const REGIONS: Region[] = ['Northeast', 'Southeast', 'Midwest', 'Southwest', 'Northwest'];

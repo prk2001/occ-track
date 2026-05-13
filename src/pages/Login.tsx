@@ -139,10 +139,16 @@ export default function Login() {
                       onClick={() => enter(role)}
                       className="group relative w-full text-left bg-bg-card rounded-2xl border border-border-custom p-5 hover:border-sp-red hover:shadow-card-elevated transition-all overflow-hidden"
                     >
-                      {/* Subtle accent halo on hover */}
+                      {/* Subtle accent halo on hover. Inline `opacity: 0.08`
+                          previously overrode the tailwind `opacity-0` (inline
+                          CSS wins specificity), leaving the halo dimly visible
+                          at rest — which axe-core then counted against the
+                          card's effective text-contrast. Moved opacity into
+                          the hover state only so resting cards have pure
+                          white backgrounds for AA conformance. */}
                       <div
-                        className="absolute top-0 right-0 w-32 h-32 rounded-full opacity-0 group-hover:opacity-100 blur-2xl transition-opacity pointer-events-none"
-                        style={{ backgroundColor: cfg.color, opacity: 0.08 }}
+                        className="absolute top-0 right-0 w-32 h-32 rounded-full opacity-0 group-hover:opacity-[0.08] blur-2xl transition-opacity pointer-events-none"
+                        style={{ backgroundColor: cfg.color }}
                       />
                       <div className="relative flex items-start gap-3">
                         <div
@@ -154,7 +160,11 @@ export default function Login() {
                         <div className="flex-1 min-w-0">
                           <p
                             className="text-[10px] font-bold uppercase tracking-[0.18em] mb-1"
-                            style={{ color: cfg.color }}
+                            // textColor (not color) — AA-compliant darker variant
+                            // for small text on white. cfg.color stays bright on
+                            // the icon dot above where the tinted background lifts
+                            // contrast back into AA territory.
+                            style={{ color: cfg.textColor }}
                           >
                             {cfg.label}
                           </p>

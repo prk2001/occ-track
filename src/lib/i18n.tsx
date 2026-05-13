@@ -1,17 +1,22 @@
 // Lightweight i18n — no external library. A plain TS object + Context.
 //
-// Coverage scope: PUBLIC-FACING SURFACES ONLY in v1.
-//   - VolunteerSignup (the volunteer\'s entry point)
-//   - MySignup (the magic-link self-edit)
-//   - WelcomeTable kiosk (greeters speak both languages at the door)
-//   - Done/success screens
-//   - Lockout / error pages
+// Coverage scope:
+//   PUBLIC SURFACES (full coverage):
+//     - VolunteerSignup (the volunteer\'s entry point)
+//     - MySignup (the magic-link self-edit)
+//     - WelcomeTable kiosk (greeters speak both languages at the door)
+//     - Done/success screens
+//     - Lockout / error pages
 //
-// Admin/leadership pages (Signups, AuditLog, Outbox, Badges, Security Center)
-// stay English-only in v1 — real CDO Leaders interface with SP HQ in English.
-// Adding ES coverage for those is straightforward: drop more keys into the
-// dictionary below. The translate() helper falls back to the key name if a
-// translation is missing, so partial coverage doesn\'t crash.
+//   ADMIN SURFACES (partial coverage — Phase 34d):
+//     - Settings (Account & Preferences) — section headers + key labels
+//     - Signups (admin roster) — section headers + action buttons
+//
+// Other admin pages (AuditLog, Outbox, Badges, Security Center) stay
+// English-only — leadership interfaces with SP HQ in English. Extending
+// to ES is straightforward: drop more keys into the dictionary below.
+// The translate() helper falls back to the key name if a translation is
+// missing, so partial coverage doesn\'t crash.
 //
 // Interpolation: use {{name}} placeholders, pass values via the second arg
 // to t(). e.g. t(\'signup.greeting\', { name: \'Maria\' }) →
@@ -145,6 +150,43 @@ const DICT: Record<Locale, Record<string, string>> = {
     'lockout.subtitle': 'Too many attempts.',
     'lockout.body': 'We\'ve paused this browser for {{minutes}} {{minutesWord}} to protect everyone\'s signup info. If you\'re trying to edit your own signup, find your magic link in the email we sent you after signing up — and come back then.',
     'lockout.contact': 'If you think this is a mistake, contact your Central Drop-off Leader — they can issue a fresh link.',
+
+    // Settings page (admin) — Phase 34d, partial coverage
+    'settings.kicker': 'Account & Preferences',
+    'settings.title': 'Make it',
+    'settings.titleEm': 'yours.',
+    'settings.profile.editLabel': 'Edit profile',
+    'settings.appMode.title': 'App Mode',
+    'settings.appMode.subtitle': 'Production locks shoebox + carton entry. Testing unlocks it for demos and training.',
+    'settings.appMode.production': 'Production',
+    'settings.appMode.testing': 'Testing',
+    'settings.appMode.current': 'Current',
+    'settings.notifications.title': 'Notifications',
+    'settings.notifications.subtitle': 'Pick which moments are worth a buzz.',
+    'settings.privacy.title': 'Privacy & Lock',
+    'settings.privacy.subtitle': 'Who sees what, and how the iPad stays safe.',
+    'settings.accessibility.title': 'Accessibility',
+    'settings.accessibility.subtitle': 'Make the screen easier on your eyes.',
+    'settings.danger.title': 'Sign out',
+    'settings.danger.subtitle': 'You\'ll be sent back to the role picker.',
+    'settings.danger.cta': 'Sign out',
+
+    // Signups admin page — Phase 34d, partial coverage
+    'signupsAdmin.kicker': 'Signups & Schedule',
+    'signupsAdmin.title': 'Volunteer',
+    'signupsAdmin.titleEm': 'roster.',
+    'signupsAdmin.subtitle': 'Who\'s on the team this Collection Week.',
+    'signupsAdmin.section.schedule': 'Collection Week schedule',
+    'signupsAdmin.section.roster': 'Volunteers',
+    'signupsAdmin.section.attendance': 'Day-of attendance',
+    'signupsAdmin.search.placeholder': 'Search name, email, phone…',
+    'signupsAdmin.action.resend': 'Resend link',
+    'signupsAdmin.action.reissue': 'Reissue link',
+    'signupsAdmin.action.transfer': 'Transfer',
+    'signupsAdmin.action.remove': 'Remove',
+    'signupsAdmin.empty': 'No volunteers signed up yet.',
+    'signupsAdmin.locked.title': 'Restricted area.',
+    'signupsAdmin.locked.body': 'Volunteer information is private. Only Super Admins, SP Admins, and Regional Admins can view the full roster.',
   },
 
   es: {
@@ -261,6 +303,43 @@ const DICT: Record<Locale, Record<string, string>> = {
     'lockout.subtitle': 'Demasiados intentos.',
     'lockout.body': 'Hemos pausado este navegador por {{minutes}} {{minutesWord}} para proteger la información de todos. Si estás tratando de editar tu propia inscripción, busca tu enlace mágico en el correo que te enviamos después de inscribirte — y vuelve entonces.',
     'lockout.contact': 'Si crees que esto es un error, contacta a tu Líder de Centro de Recolección — pueden emitir un enlace nuevo.',
+
+    // Settings page (admin) — Phase 34d, partial coverage
+    'settings.kicker': 'Cuenta y Preferencias',
+    'settings.title': 'Hazlo',
+    'settings.titleEm': 'tuyo.',
+    'settings.profile.editLabel': 'Editar perfil',
+    'settings.appMode.title': 'Modo de la App',
+    'settings.appMode.subtitle': 'El modo Producción bloquea la entrada de cajas y cartones. El modo Pruebas lo desbloquea para demos y capacitación.',
+    'settings.appMode.production': 'Producción',
+    'settings.appMode.testing': 'Pruebas',
+    'settings.appMode.current': 'Actual',
+    'settings.notifications.title': 'Notificaciones',
+    'settings.notifications.subtitle': 'Elige qué momentos vale la pena que te avisen.',
+    'settings.privacy.title': 'Privacidad y Bloqueo',
+    'settings.privacy.subtitle': 'Quién ve qué, y cómo se mantiene seguro el iPad.',
+    'settings.accessibility.title': 'Accesibilidad',
+    'settings.accessibility.subtitle': 'Haz que la pantalla sea más fácil para tus ojos.',
+    'settings.danger.title': 'Cerrar sesión',
+    'settings.danger.subtitle': 'Te enviaremos de vuelta al selector de rol.',
+    'settings.danger.cta': 'Cerrar sesión',
+
+    // Signups admin page — Phase 34d, partial coverage
+    'signupsAdmin.kicker': 'Inscripciones y Horario',
+    'signupsAdmin.title': 'Lista de',
+    'signupsAdmin.titleEm': 'voluntarios.',
+    'signupsAdmin.subtitle': 'Quiénes están en el equipo esta Semana de Recolección.',
+    'signupsAdmin.section.schedule': 'Horario de la Semana de Recolección',
+    'signupsAdmin.section.roster': 'Voluntarios',
+    'signupsAdmin.section.attendance': 'Asistencia del día',
+    'signupsAdmin.search.placeholder': 'Buscar nombre, correo, teléfono…',
+    'signupsAdmin.action.resend': 'Reenviar enlace',
+    'signupsAdmin.action.reissue': 'Emitir enlace nuevo',
+    'signupsAdmin.action.transfer': 'Transferir',
+    'signupsAdmin.action.remove': 'Eliminar',
+    'signupsAdmin.empty': 'Aún no hay voluntarios inscritos.',
+    'signupsAdmin.locked.title': 'Área restringida.',
+    'signupsAdmin.locked.body': 'La información del voluntario es privada. Solo los Super Admins, SP Admins y Admins Regionales pueden ver la lista completa.',
   },
 };
 

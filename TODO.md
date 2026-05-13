@@ -1,10 +1,10 @@
 # OCC Track — Master TODO
 
-**Last audit:** Phase 33 complete — dead-code purge + E2E expansion + docs.
-139 unit/component + 10 E2E tests all green. 53 dead shadcn files
-deleted, 36 more npm deps removed (production deps: 80 → 8).
-Admin guide + deployment runbook published in docs/.
-Source at `https://github.com/prk2001/occ-track`.
+**Last audit:** Phase 34 complete — refactor sweep + a11y enforcement +
+admin Spanish + Storybook scaffold. 139 unit + 18 E2E tests all green.
+Signups.tsx split from 1,258 → 709-line orchestrator with 5 sub-components.
+WCAG 2.1 AA enforced on 3 public routes (zero critical/serious violations).
+3 starter stories shipped. Source at `https://github.com/prk2001/occ-track`.
 
 This document inventories everything the prototype already has, then maps
 every remaining gap a real Samaritan's Purse / Operation Christmas Child
@@ -22,14 +22,16 @@ engineer-week of focused work; priorities reflect what blocks production.
 | Lib + hooks | 14 |
 | TypeScript LOC | ~12,200 |
 | Commits since Phase 14 | 15 |
-| Tests | **149** (139 unit/component + 10 E2E across 17 files) |
+| Tests | **157** (139 unit/component + 18 E2E across 5 files) |
 | Real backend | **0** (everything is localStorage) |
 | Public GitHub URL | https://github.com/prk2001/occ-track |
 | Initial bundle (gzipped) | **292 KB** (down from 358 KB via code-splitting in Phase 31) |
 | Production deps | **8** (down from 80 — removed 5 in Phase 32 + 36 in Phase 33) |
 | Source files | 81 components → **28** (Phase 33 deleted dead shadcn/ui) |
-| Spanish coverage | **Complete** for all public surfaces (Phase 29) |
+| Spanish coverage | **Complete** for public + **partial for admin** (Phase 34d) |
 | CI | GitHub Actions: tsc + vitest + Playwright on every PR (Phase 30) |
+| a11y | **WCAG 2.1 AA enforced** via axe-core on 3 public routes (Phase 34b) |
+| Storybook | Scaffolded + 3 starter stories (Phase 34e) |
 
 ---
 
@@ -91,6 +93,58 @@ engineer-week of focused work; priorities reflect what blocks production.
 ---
 
 ## Recent completions (since the last TODO refresh)
+
+- **Phase 34 — Refactor sweep: god-component split, a11y enforcement, more E2E, Spanish admin coverage, Storybook scaffold.**
+    - **34a — Signups.tsx god-component refactored.** Was 1,258 lines doing
+      schedule editing + roster CRUD + attendance + day-blocking + PII gate
+      all in one file. Now a 709-line orchestrator that composes 5 focused
+      sub-components: `DayCard` (schedule cell), `SignupCard` (memo'd roster
+      row), `AttendanceSection` (day-of greeter view), `BlockDaySheet`
+      (block-out modal), `NotForYourRoleCard` (gate explainer). Easier to
+      reason about + a clean target surface for Storybook (see 34e).
+    - **34b — axe-core a11y audit, integrated + enforced.** New
+      `src/test/e2e/a11y.spec.ts` runs `@axe-core/playwright` against 3 key
+      public routes (Login, Signup intro, MySignup recovery) tagged with
+      WCAG 2.1 AA rules. Fixed every critical/serious violation found:
+      - Removed `maximum-scale=1.0, user-scalable=no` from viewport meta
+        (WCAG 1.4.4 — was preventing low-vision users from pinch-zooming).
+      - Bumped Footer text from `text-slate-light` (3.27:1) to `text-slate`
+        (7.65:1). Same for the address row's MapPin icon (now `aria-hidden`).
+      - Added `textColor` field to `ROLE_CONFIG` for AA-safe label colors;
+        gold + sky brand colors (3.18:1, 2.65:1) get darker variants
+        (#92400E, #0369A1) for small text on white. Brand `color` still
+        used for icon dots on tinted backgrounds where contrast holds.
+      - Replaced `opacity-50` on past-day rows in VolunteerSignup (which
+        multiplied into children + tanked computed contrast) with a tinted
+        `bg-bg-cream/40 grayscale` background.
+      - Discovered axe was scanning mid-Framer-Motion fade and saw partial
+        opacities; added `page.waitForTimeout(1200)` to settle animations
+        before scan. Soft-cap flipped to `expect(critical).toEqual([])`
+        for strict CI enforcement.
+    - **34c — 5 new E2E tests across kiosk + admin actions.**
+      - `kiosk-pin.spec.ts` — first launch sets PIN + unlocks the
+        WelcomeTable; 5 wrong PIN attempts force a full reset.
+      - `admin-actions.spec.ts` — idle lock fires after 15 fake-clock
+        minutes (uses `page.clock.install()`); magic-link reissue rotates
+        the editToken and the OLD link rejects while the NEW link resolves;
+        cross-CDO transfer updates `locationId` + writes a `TRANSFERRED`
+        audit event.
+      - All 18 E2E tests pass (3 signup-flow + 7 admin-flows + 3 a11y +
+        2 kiosk-pin + 3 admin-actions).
+    - **34d — Spanish translations expanded to admin pages.** Settings
+      (Account & Preferences) + Signups (admin roster) now have ES coverage
+      for headers, section titles, primary buttons, and key labels (~30
+      new keys per locale). LanguageToggle wired into the Settings hero so
+      admins can flip locale globally from the most-visited admin page.
+      Old "admin pages stay English-only" stance softened — partial
+      coverage falls back to EN gracefully via the `t()` helper.
+    - **34e — Storybook minimal scaffold + 3 starter stories.**
+      `.storybook/{main,preview}.ts` + 3 `.stories.tsx` for the components
+      extracted in 34a (DayCard, SignupCard, BlockDaySheet). Run with
+      `npm run storybook` (port 6006). New scripts: `storybook` +
+      `storybook:build`. Each story documents 3-5 key states (Open,
+      Today, Blocked, Past, EditingTime, etc.) so visual review can
+      iterate per-component without spinning up the full app + auth.
 
 - **Phase 33 — Dead-code purge + E2E expansion + documentation.**
     - **Deleted `src/components/ui/`** (53 files, 300 KB of shadcn boilerplate).

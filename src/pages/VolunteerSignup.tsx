@@ -425,8 +425,13 @@ function SchedulePreview({
           return (
             <li
               key={d.date}
+              // Avoid opacity for "past" rows — opacity multiplies into
+              // children and tanks effective contrast (axe flags it as
+              // serious WCAG 1.4.3 fail). Use a tinted background + slightly
+              // muted text instead; the row still reads as "deprioritized"
+              // but every glyph stays AA-compliant.
               className={`flex items-center gap-3 px-5 py-2.5 text-sm ${
-                isPast ? 'opacity-50' : ''
+                isPast ? 'bg-bg-cream/40 grayscale' : ''
               }`}
             >
               <div className="flex flex-col items-center w-9 shrink-0">
@@ -444,7 +449,9 @@ function SchedulePreview({
                   {block.coveredBy}
                 </span>
               ) : isPast ? (
-                <span className="text-[11px] font-bold text-ink-light/60 uppercase tracking-wider">Past</span>
+                // text-ink-light/60 = ~#969696 on white = 3.7:1, fails AA.
+                // Use full text-ink-light (#525252 = 7.4:1) for AA conformance.
+                <span className="text-[11px] font-bold text-ink-light uppercase tracking-wider">Past</span>
               ) : (
                 <span className="flex items-center gap-1.5 text-[11px] font-bold text-occ-green uppercase tracking-wider">
                   <span className="w-1.5 h-1.5 rounded-full bg-occ-green" />

@@ -6,12 +6,15 @@ import {
   FlaskConical, ShieldCheck, AlertTriangle,
 } from 'lucide-react';
 import Layout from '@/components/Layout';
+import LanguageToggle from '@/components/LanguageToggle';
 import { useAuth } from '@/hooks/useAuth';
 import { useAppMode } from '@/lib/appMode';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { ROLE_CONFIG, getLocationById } from '@/data/mockData';
+import { useTranslation } from '@/lib/i18n';
 
 export default function Settings() {
+  const { t } = useTranslation();
   const { user, logout, isSuperAdmin } = useAuth();
   const { mode, setMode, isTest, history } = useAppMode();
   const rc = user ? ROLE_CONFIG[user.role] : null;
@@ -35,14 +38,20 @@ export default function Settings() {
   return (
     <Layout>
       <div className="px-4 py-4 max-w-3xl mx-auto space-y-6 pb-24">
-        {/* Editorial hero */}
+        {/* Editorial hero — i18n via useTranslation; LanguageToggle lets
+            admins flip locale globally from the most visible admin page. */}
         <header className="space-y-2 pt-1">
-          <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-sp-red">
-            Account & Preferences
-          </p>
-          <h1 className="font-display text-3xl sm:text-4xl font-medium text-ink leading-tight tracking-tight">
-            Make it <span className="font-display-italic text-sp-red">yours.</span>
-          </h1>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-sp-red">
+                {t('settings.kicker')}
+              </p>
+              <h1 className="font-display text-3xl sm:text-4xl font-medium text-ink leading-tight tracking-tight">
+                {t('settings.title')} <span className="font-display-italic text-sp-red">{t('settings.titleEm')}</span>
+              </h1>
+            </div>
+            <LanguageToggle />
+          </div>
         </header>
 
         {/* Profile card */}
@@ -71,7 +80,7 @@ export default function Settings() {
                   {rc?.label}
                 </span>
               </div>
-              <button className="touch-target shrink-0 text-ink-light hover:text-sp-red transition-colors" aria-label="Edit profile">
+              <button className="touch-target shrink-0 text-ink-light hover:text-sp-red transition-colors" aria-label={t('settings.profile.editLabel')}>
                 <Pencil className="w-4 h-4" />
               </button>
             </div>
@@ -107,10 +116,10 @@ export default function Settings() {
               </div>
               <div>
                 <h2 className="font-display text-base text-ink leading-tight">
-                  App Mode
+                  {t('settings.appMode.title')}
                 </h2>
                 <p className="text-[11px] text-ink-light italic">
-                  Production locks shoebox + carton entry. Testing unlocks it for demos and training.
+                  {t('settings.appMode.subtitle')}
                 </p>
               </div>
             </header>
@@ -135,7 +144,7 @@ export default function Settings() {
                   <p className={`font-display text-base ${
                     mode === 'production' ? 'text-occ-green-dark' : 'text-ink'
                   }`}>
-                    Production
+                    {t('settings.appMode.production')}
                   </p>
                   <p className="text-[10px] text-ink-light italic mt-0.5 leading-relaxed">
                     Shoebox + carton entry locked. Real Collection Week tallies safe.
@@ -168,7 +177,7 @@ export default function Settings() {
                   <p className={`font-display text-base ${
                     mode === 'test' ? 'text-gold' : 'text-ink'
                   }`}>
-                    Testing
+                    {t('settings.appMode.testing')}
                   </p>
                   <p className="text-[10px] text-ink-light italic mt-0.5 leading-relaxed">
                     Full read/write for training, QA, demos. Entries NOT counted.
@@ -222,8 +231,8 @@ export default function Settings() {
           </motion.section>
         )}
 
-        {/* Notifications */}
-        <SettingsSection icon={Bell} title="Notifications">
+        {/* Notifications — translated section title */}
+        <SettingsSection icon={Bell} title={t('settings.notifications.title')}>
           <ToggleRow label="Push notifications for drop-offs" sub="When boxes arrive at your CDO" enabled={notifPushDrops} onChange={setNotifPushDrops} />
           <ToggleRow label="Daily digest" sub="Morning summary of yesterday" enabled={notifDailyDigest} onChange={setNotifDailyDigest} />
           <ToggleRow label="Milestone celebrations" sub="500K, 1M, regional wins" enabled={notifMilestones} onChange={setNotifMilestones} />
@@ -285,7 +294,7 @@ export default function Settings() {
           className="w-full h-14 bg-bg-card border-2 border-sp-red/30 text-sp-red text-base font-semibold rounded-2xl flex items-center justify-center gap-2 hover:bg-sp-red-light transition-colors"
         >
           <LogOut className="w-5 h-5" />
-          Sign Out
+          {t('settings.danger.cta')}
         </button>
       </div>
     </Layout>
