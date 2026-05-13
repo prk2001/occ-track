@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect } from 'react';
 import { Routes, Route } from 'react-router';
+import { MotionConfig } from 'framer-motion';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { AuthProvider } from '@/hooks/useAuth';
 import { I18nProvider } from '@/lib/i18n';
@@ -37,6 +38,9 @@ const SecurityCenter = lazy(() => import('@/pages/SecurityCenter'));
 const Outbox = lazy(() => import('@/pages/Outbox'));
 const States = lazy(() => import('@/pages/States'));
 const Settings = lazy(() => import('@/pages/Settings'));
+// Phase 35a: lightweight public legal pages.
+const Privacy = lazy(() => import('@/pages/Privacy'));
+const Terms = lazy(() => import('@/pages/Terms'));
 
 // Suspense fallback while a lazy route is being fetched. Plain + minimal
 // so it doesn't flash a "loading" screen unless the network is genuinely slow.
@@ -69,6 +73,7 @@ export default function App() {
   }, []);
   return (
     <ErrorBoundary>
+      <MotionConfig reducedMotion="user">
       <I18nProvider>
         <AppModeProvider>
           <AuthProvider>
@@ -95,12 +100,15 @@ export default function App() {
                 <Route path="/security" element={<SecurityCenter />} />
                 <Route path="/states" element={<States />} />
                 <Route path="/settings" element={<Settings />} />
+                <Route path="/privacy" element={<Privacy />} />
+                <Route path="/terms" element={<Terms />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>
           </AuthProvider>
         </AppModeProvider>
       </I18nProvider>
+      </MotionConfig>
     </ErrorBoundary>
   );
 }

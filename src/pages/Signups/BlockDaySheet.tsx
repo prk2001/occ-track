@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { AlertCircle, Lock, MessageCircle, Users, X } from 'lucide-react';
 import { COLLECTION_DAYS } from '@/data/mockData';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 
 // ─── Block-day bottom sheet ─────────────────────────────────────────────────
 function BlockDaySheet({
@@ -16,6 +17,8 @@ function BlockDaySheet({
   const [note, setNote] = useState('');
   const day = COLLECTION_DAYS.find((d) => d.date === date);
   const canSave = coveredBy.trim().length > 0;
+  // Phase 35d: trap focus inside the bottom sheet.
+  const trapRef = useFocusTrap<HTMLDivElement>(true);
 
   return (
     <>
@@ -32,10 +35,14 @@ function BlockDaySheet({
         exit={{ y: '100%' }}
         transition={{ type: 'tween', duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
         className="fixed bottom-0 left-0 right-0 z-50 bg-bg-card rounded-t-3xl shadow-card-elevated max-h-[90vh] overflow-y-auto"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="block-day-title"
+        ref={trapRef}
       >
         <div className="sticky top-0 bg-bg-card border-b border-border-custom px-5 py-4 flex items-center justify-between rounded-t-3xl">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-sp-red">Block out this day</p>
+            <p id="block-day-title" className="text-[10px] font-bold uppercase tracking-wider text-sp-red">Block out this day</p>
             <p className="font-display text-xl text-ink leading-none mt-1">
               {day?.weekday}, Nov {day?.monthDay}
             </p>

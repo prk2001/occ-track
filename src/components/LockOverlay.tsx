@@ -3,6 +3,7 @@ import { Lock, ShieldCheck } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { ROLE_CONFIG } from '@/data/mockData';
 import { getFirstName } from '@/lib/name';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 
 /**
  * Lock overlay — shown on top of any private page when useIdleLock
@@ -24,6 +25,9 @@ export default function LockOverlay({
 }) {
   const { user } = useAuth();
   const rc = user ? ROLE_CONFIG[user.role] : null;
+  // Phase 35d: trap Tab/Shift+Tab inside the locked dialog so keyboard
+  // users can't reach the (visually-blocked) content underneath.
+  const trapRef = useFocusTrap<HTMLDivElement>(visible);
 
   if (warning && !visible) {
     return (
@@ -60,6 +64,7 @@ export default function LockOverlay({
           aria-modal="true"
           aria-labelledby="lock-overlay-title"
           aria-describedby="lock-overlay-desc"
+          ref={trapRef}
         >
           <motion.div
             initial={{ scale: 0.92, opacity: 0 }}

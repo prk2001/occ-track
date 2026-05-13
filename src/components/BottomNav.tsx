@@ -69,7 +69,11 @@ export default function BottomNav() {
               href={`#${item.path}`}
               className={cn(
                 'flex flex-col items-center justify-center gap-0.5 w-16 h-full relative transition-colors',
-                active ? 'text-sp-red' : 'text-slate-light'
+                // text-slate-light (#94A3B8) at 10px fails WCAG AA (2.56:1).
+                // Use text-slate (#475569 = 7.65:1) so inactive nav items
+                // are still readable for low-vision users; active items
+                // already pass via text-sp-red on bg-bg-card.
+                active ? 'text-sp-red' : 'text-slate'
               )}
             >
               {active && (

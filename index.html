@@ -97,6 +97,13 @@
     <meta name="twitter:description" content="Official Collection Week tracking app for Samaritan's Purse Operation Christmas Child." />
     <link rel="icon" type="image/png" href="/app-icon.png" />
     <link rel="apple-touch-icon" href="/app-icon.png" />
+    <!-- PWA manifest — Phase 35b. Makes the app installable on iOS/Android.
+         Sets theme color, splash screen background, app icon, and adds
+         "Sign up" + "Kiosk" shortcuts that appear on long-press of the
+         home-screen icon (Android) and in the Safari share sheet (iOS).
+         The manifest URL is relative (`./manifest.webmanifest`) so it works
+         when the SPA is served from a sub-path. -->
+    <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400..1000;1,9..40,400..1000&family=Geist:wght@300..800&display=swap" rel="stylesheet" />

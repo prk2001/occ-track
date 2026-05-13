@@ -1,0 +1,43 @@
+{
+  "name": "OCC Track — Operation Christmas Child",
+  "short_name": "OCC Track",
+  "description": "The official Collection Week companion for Samaritan's Purse Operation Christmas Child. Greeters, Drop-off Leaders, and Central Drop-off Leaders use OCC Track to log shoeboxes, pack cartons, and load trailers.",
+  "lang": "en",
+  "start_url": "./#/",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#F4EDE0",
+  "theme_color": "#C8102E",
+  "categories": ["productivity", "utilities"],
+  "icons": [
+    {
+      "src": "./app-icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./app-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Volunteer Sign-up",
+      "short_name": "Sign up",
+      "description": "Sign up to volunteer for Collection Week",
+      "url": "./#/signup",
+      "icons": [{ "src": "./app-icon.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Welcome Table Kiosk",
+      "short_name": "Kiosk",
+      "description": "Start the iPad greeter kiosk",
+      "url": "./#/welcome-table",
+      "icons": [{ "src": "./app-icon.png", "sizes": "192x192" }]
+    }
+  ]
+}

@@ -1,8 +1,11 @@
 import { Mark } from '@/components/Logo';
 import { MapPin } from 'lucide-react';
+import { Link } from 'react-router';
+import { useTranslation } from '@/lib/i18n';
 
 export default function Footer() {
   const year = new Date().getFullYear();
+  const { t } = useTranslation();
   return (
     <footer className="mt-6 mb-20 px-4">
       <div className="max-w-4xl mx-auto bg-bg-card border border-border-custom rounded-2xl p-6 text-center space-y-3 shadow-card">
@@ -34,6 +37,17 @@ export default function Footer() {
               read attribution. */}
           <p className="text-[10px] text-slate">
             © {year} Samaritan&apos;s Purse. All rights reserved.
+          </p>
+          {/* Legal links — Phase 35a. Use Link (react-router) so HashRouter
+              keeps the SPA experience; both pages are public + no-index. */}
+          <p className="text-[11px] text-slate flex items-center justify-center gap-3 pt-1">
+            <Link to="/privacy" className="hover:text-sp-red underline-offset-2 hover:underline transition-colors">
+              {t('common.privacy')}
+            </Link>
+            <span className="text-slate-light" aria-hidden="true">·</span>
+            <Link to="/terms" className="hover:text-sp-red underline-offset-2 hover:underline transition-colors">
+              {t('common.terms')}
+            </Link>
           </p>
         </div>
       </div>

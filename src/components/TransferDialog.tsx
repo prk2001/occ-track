@@ -9,6 +9,7 @@ import { logAuditEvent } from '@/lib/auditLog';
 import { sendMessage, buildCdoSignupAlert } from '@/lib/outbox';
 import { USERS, getLocationById } from '@/data/mockData';
 import { getFirstName } from '@/lib/name';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 
 /**
  * Cross-CDO transfer dialog.
@@ -33,6 +34,8 @@ export default function TransferDialog({
   const [targetCdo, setTargetCdo] = useState<string>('');
   const [reason, setReason] = useState<string>('');
   const [step, setStep] = useState<'pick' | 'confirm'>('pick');
+  // Phase 35d: trap focus inside the dialog while it's open.
+  const trapRef = useFocusTrap<HTMLDivElement>(open && !!signup);
 
   if (!open || !signup) return null;
 
@@ -118,6 +121,10 @@ export default function TransferDialog({
           transition={{ type: 'spring', stiffness: 240, damping: 22 }}
           onClick={(e) => e.stopPropagation()}
           className="bg-bg-card rounded-3xl shadow-card-elevated max-w-md w-full overflow-hidden"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="transfer-dialog-title"
+          ref={trapRef}
         >
           <header className="px-6 py-4 border-b border-border-custom flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
@@ -125,7 +132,7 @@ export default function TransferDialog({
                 <ArrowRightLeft className="w-5 h-5 text-blue-accent" />
               </div>
               <div>
-                <h2 className="font-display text-lg text-ink leading-tight">Transfer Volunteer</h2>
+                <h2 id="transfer-dialog-title" className="font-display text-lg text-ink leading-tight">Transfer Volunteer</h2>
                 <p className="text-[11px] text-ink-light italic">{signup.name}</p>
               </div>
             </div>

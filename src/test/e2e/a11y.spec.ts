@@ -17,6 +17,9 @@ const ROUTES_TO_AUDIT = [
   { name: 'Login', url: '/#/login' },
   { name: 'Volunteer signup intro', url: '/#/signup' },
   { name: 'My signup (no token = recovery flow)', url: '/#/my-signup' },
+  // Phase 35a — legal pages should clear AA before they go in the footer.
+  { name: 'Privacy', url: '/#/privacy' },
+  { name: 'Terms', url: '/#/terms' },
 ];
 
 for (const { name, url } of ROUTES_TO_AUDIT) {
