@@ -1,5 +1,4 @@
 import { motion } from 'framer-motion';
-import { Quote } from 'lucide-react';
 
 interface Verse {
   text: string;
@@ -51,28 +50,34 @@ export default function BibleVerse({ tone = 'cream' }: { tone?: 'cream' | 'dark'
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-      className={`relative rounded-2xl px-6 py-7 sm:px-8 sm:py-8 overflow-hidden ${
+      className={
         isDark
-          ? 'bg-white/[0.03] border border-white/10'
-          : 'bg-white border-l-4 border-occ-green shadow-card'
-      }`}
+          ? 'relative px-2 sm:px-4 py-2 text-center'
+          : 'relative px-4 sm:px-6 py-2 text-center'
+      }
     >
-      <Quote className={`absolute top-4 left-4 w-6 h-6 ${isDark ? 'text-occ-green/40' : 'text-occ-green/40'}`} aria-hidden="true" />
-      <blockquote className="relative pl-6">
+      {/* Big editorial open-quote — set in Fraunces, hangs above the
+          quote like a New Yorker pull-quote. No card, no shadow — the
+          quote IS the design. */}
+      <span
+        aria-hidden="true"
+        className={`font-display block text-[80px] leading-[0.6] mb-1 ${
+          isDark ? 'text-occ-green/35' : 'text-sp-red/30'
+        }`}
+        style={{ fontVariationSettings: '"opsz" 144, "SOFT" 100, "WONK" 0' }}
+      >
+        &ldquo;
+      </span>
+      <blockquote>
         <p
-          className={`font-display-italic text-lg sm:text-xl leading-[1.4] ${
+          className={`font-display-italic text-[20px] sm:text-[24px] leading-[1.45] max-w-xl mx-auto ${
             isDark ? 'text-white/90' : 'text-ink'
           }`}
         >
-          &ldquo;{verse.text}&rdquo;
+          {verse.text}
         </p>
-        <figcaption className="mt-4 flex items-center gap-2">
-          <span className={`h-px w-6 ${isDark ? 'bg-white/30' : 'bg-occ-green'}`} aria-hidden="true" />
-          <cite className={`text-[11px] font-semibold uppercase tracking-[0.18em] not-italic ${
-            isDark ? 'text-white/70' : 'text-occ-green'
-          }`}>
-            {verse.reference}
-          </cite>
+        <figcaption className={`font-mast text-[10px] mt-5 ${isDark ? 'text-white/70' : 'text-ink-light'}`}>
+          <cite className="not-italic">&mdash; {verse.reference}</cite>
         </figcaption>
       </blockquote>
     </motion.figure>

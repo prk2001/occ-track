@@ -5,19 +5,32 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['DM Sans', 'Geist', 'ui-sans-serif', 'system-ui', '-apple-system', 'sans-serif'],
-        display: ['DM Sans', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        // Phase 36 — two-font editorial system.
+        // `sans` (DM Sans) handles body + UI utility (buttons, labels, forms).
+        // `display` (Fraunces) is the editorial face — H1s, pull quotes,
+        //   drop caps. Variable axes (SOFT, WONK) are tuned per-utility in
+        //   index.css via font-variation-settings.
+        // `display-italic` exposes the same family pre-set to italic so we
+        //   can keep using `font-display-italic` as a Tailwind utility.
+        sans: ['"DM Sans"', 'ui-sans-serif', 'system-ui', '-apple-system', 'sans-serif'],
+        display: ['"Fraunces"', '"DM Sans"', 'ui-serif', 'Georgia', 'serif'],
+        'display-italic': ['"Fraunces"', '"DM Sans"', 'ui-serif', 'Georgia', 'serif'],
       },
       colors: {
+        // Phase 36 — refined editorial palette. We keep the OCC brand
+        // anchors (red/green) but deepen them into "ink red" + "forest"
+        // and add a `ink-red` accent for editorial pulls. Light variants
+        // are warmer (rose-tinted, not pink) to harmonize with cream paper.
         'sp-red': {
-          DEFAULT: '#C8102E',
-          dark: '#A00D24',
-          light: '#FDE8EB',
+          DEFAULT: '#A8121F',   // deeper "ink red" (was #C8102E)
+          bright: '#C8102E',    // the original brand red, kept for chips
+          dark: '#7C0A14',      // burgundy for accents/deep pulls
+          light: '#F8E4E6',     // warm rose tint
         },
         'occ-green': {
           DEFAULT: '#1B5E20',
           dark: '#0F3D14',
-          light: '#E8F5E9',
+          light: '#E6EFE2',     // warmer green tint (was #E8F5E9)
           deep: '#0F3D14',
         },
         'lime': {
@@ -26,8 +39,10 @@ module.exports = {
           light: '#ECFCCB',
         },
         'gold': {
-          DEFAULT: '#D97706',
-          light: '#FEF3C7',
+          DEFAULT: '#A07020',   // deeper goldenrod for editorial accents
+          bright: '#D97706',    // original gold, kept for warning chips
+          light: '#F2E6C7',     // warmer cream-gold tint
+          deep: '#7A5618',
         },
         'navy': {
           DEFAULT: '#111111',
@@ -37,16 +52,21 @@ module.exports = {
           DEFAULT: '#475569',
           light: '#94A3B8',
         },
-        'bg-primary': '#FFFFFF',
-        'bg-card': '#FFFFFF',
-        'bg-cream': '#F4EDE0',
-        'bg-warm': '#FBF6EC',
+        // Paper-tone backgrounds — slightly more cream/warm than before.
+        // `bg-paper` is the new default page background; bg-card is ivory.
+        'bg-primary': '#FFFCF7',     // warm ivory (was pure white)
+        'bg-card': '#FFFCF7',        // warm ivory cards
+        'bg-cream': '#FAF4E8',       // a touch warmer (was #F4EDE0)
+        'bg-paper': '#FAF4E8',       // alias for new paper-toned bg
+        'bg-warm': '#F4ECD9',        // deeper warm tan
         'bg-dotted': '#F7F8F5',
         'bg-navy': '#0F172A',
-        'ink': { DEFAULT: '#111111', light: '#525252' },
-        'border-custom': '#E5E7EB',
+        // Walnut-brown ink (warmer than pure black) feels printed, not pixel.
+        'ink': { DEFAULT: '#1A0F0A', light: '#5A4B40', deep: '#0F0805' },
+        'border-custom': '#E8DFD0',  // warm cream-tan border (was #E5E7EB cool gray)
         'border-warm': '#D9CDB5',
-        'border-focus': '#C8102E',
+        'border-focus': '#A8121F',
+        'border-deep': '#3D2C1F',    // for editorial rules (decorative dividers)
         'blue-accent': '#2563EB',
         'blue-light': '#EFF6FF',
         'purple-accent': '#7C3AED',

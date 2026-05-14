@@ -1,54 +1,71 @@
 import { Mark } from '@/components/Logo';
-import { MapPin } from 'lucide-react';
 import { Link } from 'react-router';
 import { useTranslation } from '@/lib/i18n';
 
+/**
+ * Footer — editorial colophon.
+ *
+ * Phase 36 redesign: dropped the bordered card chrome in favor of an
+ * open colophon — page seal on the left, signature in the middle,
+ * masthead address on the right. Reads like the back of a hand-set
+ * pamphlet, not a SaaS footer.
+ */
 export default function Footer() {
   const year = new Date().getFullYear();
   const { t } = useTranslation();
   return (
-    <footer className="mt-6 mb-20 px-4">
-      <div className="max-w-4xl mx-auto bg-bg-card border border-border-custom rounded-2xl p-6 text-center space-y-3 shadow-card">
-        <div className="flex items-center justify-center gap-2">
-          <Mark size={28} />
-          <div className="flex flex-col items-start leading-none">
-            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-sp-red">Operation Christmas Child</span>
-            <span className="text-sm font-bold text-navy">A project of Samaritan&apos;s Purse</span>
-          </div>
+    <footer className="mt-10 mb-20 px-5">
+      <div className="max-w-3xl mx-auto">
+        {/* Fleuron divider — opens the colophon. */}
+        <div className="editorial-rule mb-8" aria-hidden="true">
+          <span className="fleuron" />
         </div>
 
-        <p className="text-xs text-slate max-w-md mx-auto leading-relaxed">
-          OCC Track is the official digital companion for Drop-off Leaders, Central
-          Drop-off Leaders, and Greeters during Collection Week.
-        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-[auto_1fr_auto] gap-6 sm:gap-8 items-center">
+          {/* Page seal — small Est. 1993 stamp, slightly tilted */}
+          <div className="flex justify-center sm:justify-start">
+            <div className="page-seal" style={{ transform: 'rotate(-4deg)' }}>
+              <span className="font-mast text-[6.5px] block">Operation</span>
+              <span className="font-mast text-[6.5px] block">Christmas</span>
+              <span className="font-mast text-[6.5px] block">Child</span>
+              <span className="font-display-italic text-[12px] block mt-0.5">est.</span>
+              <span className="font-display text-[13px] block tabular-nums leading-none">1993</span>
+            </div>
+          </div>
 
-        <p className="font-display-italic text-2xl text-sp-red leading-none my-1">
-          In Jesus&apos; Name.
-        </p>
+          {/* Signature — center column. */}
+          <div className="text-center space-y-2">
+            <div className="flex items-center justify-center gap-2">
+              <Mark size={20} />
+              <p className="font-mast text-[9px] text-ink-light">Operation Christmas Child</p>
+            </div>
+            <p className="font-display-italic text-[26px] text-sp-red leading-none">
+              In Jesus&rsquo; Name.
+            </p>
+            <p className="font-sans text-[11px] text-ink-light italic max-w-sm mx-auto leading-relaxed">
+              The official digital companion for Drop-off Leaders, Central
+              Drop-off Leaders, and Greeters.
+            </p>
+          </div>
 
-        <div className="pt-3 border-t border-border-custom space-y-1">
-          <p className="text-[11px] text-slate flex items-center justify-center gap-1.5">
-            <MapPin className="w-3 h-3 text-slate" aria-hidden="true" />
-            Samaritan&apos;s Purse · 801 Bamboo Road · Boone, NC 28607
-          </p>
-          {/* © line was text-slate-light (#94A3B8 = 3.27:1 contrast on white,
-              fails WCAG 1.4.3 AA for normal text). Promoted to text-slate
-              (#475569 = 7.65:1) so screen-magnifier + low-vision users can
-              read attribution. */}
-          <p className="text-[10px] text-slate">
-            © {year} Samaritan&apos;s Purse. All rights reserved.
-          </p>
-          {/* Legal links — Phase 35a. Use Link (react-router) so HashRouter
-              keeps the SPA experience; both pages are public + no-index. */}
-          <p className="text-[11px] text-slate flex items-center justify-center gap-3 pt-1">
-            <Link to="/privacy" className="hover:text-sp-red underline-offset-2 hover:underline transition-colors">
-              {t('common.privacy')}
-            </Link>
-            <span className="text-slate-light" aria-hidden="true">·</span>
-            <Link to="/terms" className="hover:text-sp-red underline-offset-2 hover:underline transition-colors">
-              {t('common.terms')}
-            </Link>
-          </p>
+          {/* Masthead address + legal — right column. */}
+          <div className="font-mast text-[9px] text-ink-light text-center sm:text-right space-y-1.5 leading-relaxed">
+            <p>Samaritan&rsquo;s Purse</p>
+            <p>801 Bamboo Road</p>
+            <p>Boone &middot; NC 28607</p>
+            <p className="pt-2 flex items-center justify-center sm:justify-end gap-2">
+              <Link to="/privacy" className="hover:text-sp-red transition-colors">
+                {t('common.privacy')}
+              </Link>
+              <span className="text-ink-light/40" aria-hidden="true">/</span>
+              <Link to="/terms" className="hover:text-sp-red transition-colors">
+                {t('common.terms')}
+              </Link>
+            </p>
+            <p className="font-sans not-italic text-[10px] text-ink-light/70 normal-case tracking-normal pt-1">
+              © {year} Samaritan&rsquo;s Purse. All rights reserved.
+            </p>
+          </div>
         </div>
       </div>
     </footer>
