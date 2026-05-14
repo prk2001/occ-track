@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { useNavigate } from 'react-router';
 import { motion } from 'framer-motion';
 import {
-  HandHeart, ArrowRight, Mail, Lock, LogIn,
+  ArrowRight, Mail, Lock, LogIn,
 } from 'lucide-react';
 import Layout from '@/components/Layout';
 import Logo from '@/components/Logo';
@@ -319,38 +319,11 @@ export default function Login() {
             )}
           </motion.section>
 
-          <div className="editorial-rule my-12" aria-hidden="true">
-            <span className="fleuron" />
-          </div>
-
-          {/* ─── Volunteer sign-up callout ─────────────────────────── */}
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.55, duration: 0.5 }}
-            className="max-w-2xl mx-auto"
-          >
-            <Link
-              to="/signup"
-              className="group block bg-bg-card border-l-4 border-occ-green pl-5 pr-5 py-5 hover:bg-occ-green-light/40 transition-colors"
-            >
-              <div className="flex items-center gap-4">
-                <div className="w-11 h-11 rounded-full bg-occ-green-light flex items-center justify-center shrink-0">
-                  <HandHeart className="w-5 h-5 text-occ-green-dark" aria-hidden="true" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-mast text-[10px] text-occ-green-dark">Not on a team yet?</p>
-                  <p className="font-display-italic text-[20px] text-occ-green-deep leading-tight mt-1">
-                    Sign up to volunteer.
-                  </p>
-                  <p className="font-sans text-[12px] text-ink-light mt-1 leading-relaxed">
-                    Pick your days, pick your role — we&apos;ll handle the rest.
-                  </p>
-                </div>
-                <ArrowRight className="w-5 h-5 text-occ-green group-hover:translate-x-1 transition-transform shrink-0" aria-hidden="true" />
-              </div>
-            </Link>
-          </motion.div>
+          {/* Volunteer sign-up (/signup) intentionally NOT promoted here —
+              that page is for Central Drop-offs and Drop-off sites to share
+              with their teams directly (via QR code, email, or church
+              bulletin). The Login landing page stays focused on
+              authentication for the people who already have an account. */}
 
           {/* Colophon (seal + tagline + address) handled globally by Footer. */}
         </div>
