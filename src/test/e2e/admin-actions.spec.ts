@@ -48,6 +48,8 @@ async function seedSignup(
 
 async function loginAsSuperAdmin(page: Page) {
   await page.goto('/#/login');
+  // Phase 37: role buttons live behind the "Sign in for demo" accordion.
+  await page.getByRole('button', { name: /Sign in for demo/i }).click();
   await page.getByRole('button', { name: /Super Admin/i }).first().click();
   await expect(page.getByText(/Super Admin/i).first()).toBeVisible({ timeout: 5000 });
 }

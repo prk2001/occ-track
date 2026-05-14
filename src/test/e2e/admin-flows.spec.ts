@@ -24,6 +24,16 @@ test.describe('Admin flows — auth, role scoping, app-mode integrity', () => {
     await page.evaluate(() => { window.localStorage.clear(); window.sessionStorage.clear(); });
   }
 
+  // Phase 37: the public Login page no longer shows the 6-role picker
+  // by default — it shows a sign-in form. The "Sign in for demo" toggle
+  // reveals the role buttons used by these tests.
+  async function loginAs(page: any, roleLabel: string | RegExp) {
+    await page.goto('/#/login');
+    // Open the demo accordion to reveal role buttons.
+    await page.getByRole('button', { name: /Sign in for demo/i }).click();
+    await page.getByRole('button', { name: roleLabel }).first().click();
+  }
+
   test('default-null auth: visiting / redirects to /login when not logged in', async ({ page }) => {
     await page.goto('/#/');
     // Dashboard returns <Navigate to="/login" /> when user is null.
@@ -33,29 +43,25 @@ test.describe('Admin flows — auth, role scoping, app-mode integrity', () => {
 
   test('login as Super Admin → dashboard shows Super Admin badge', async ({ page }) => {
     await freshLogin(page);
-    await page.goto('/#/login');
-    await page.getByRole('button', { name: /Super Admin/i }).first().click();
+    await loginAs(page, /Super Admin/i);
     // Don't assert on URL — assert the Super Admin dashboard is now visible.
     await expect(page.getByText(/Super Admin/i).first()).toBeVisible({ timeout: 5000 });
   });
 
   test('login as CDO Leader → Signups admin shows privacy lock card', async ({ page }) => {
     await freshLogin(page);
-    await page.getByRole('button', { name: /CDO Leader/i }).first().click();
+    await loginAs(page, /CDO Leader/i);
     // Wait for dashboard to render
     await expect(page.getByText(/CDO Leader/i).first()).toBeVisible({ timeout: 5000 });
 
     // Navigate to /signups — CDO Leader is gated from PII roster (Phase 14)
     await page.goto('/#/signups');
-    // Both the h1 hero and the h2 lock card say "Volunteer information
-    // is private" — either is fine proof of the lockdown. Use the
-    // surrounding hero phrase to disambiguate.
     await expect(page.getByText(/Restricted area\./i)).toBeVisible({ timeout: 5000 });
   });
 
   test('production-mode app blocks shoebox check-in', async ({ page }) => {
     await freshLogin(page);
-    await page.getByRole('button', { name: /Super Admin/i }).first().click();
+    await loginAs(page, /Super Admin/i);
     await expect(page.getByText(/Super Admin/i).first()).toBeVisible({ timeout: 5000 });
 
     // Default mode is production → /checkin shows the lock card
@@ -66,7 +72,7 @@ test.describe('Admin flows — auth, role scoping, app-mode integrity', () => {
 
   test('/security route accessible to Super Admin', async ({ page }) => {
     await freshLogin(page);
-    await page.getByRole('button', { name: /Super Admin/i }).first().click();
+    await loginAs(page, /Super Admin/i);
     await page.goto('/#/security');
     // Security Center page should load (gated to isSuperAdmin)
     await expect(page.getByText(/Security Center/i).first()).toBeVisible();
@@ -74,7 +80,7 @@ test.describe('Admin flows — auth, role scoping, app-mode integrity', () => {
 
   test('/security route blocked for CDO Leader', async ({ page }) => {
     await freshLogin(page);
-    await page.getByRole('button', { name: /CDO Leader/i }).first().click();
+    await loginAs(page, /CDO Leader/i);
     await page.goto('/#/security');
     // Should show the Super-Admin-only lock screen
     await expect(page.getByText(/Super Admin only/i).first()).toBeVisible();

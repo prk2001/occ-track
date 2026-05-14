@@ -39,6 +39,10 @@ for (const { name, url } of ROUTES_TO_AUDIT) {
     const results = await new AxeBuilder({ page })
       // WCAG 2.1 AA is the typical compliance bar for ministry/non-profit sites.
       .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+      // Don't audit content inside third-party iframes (YouTube/Brightcove
+      // players have their own a11y posture and we can't fix violations
+      // inside their DOM). Our own UI still gets scanned end-to-end.
+      .exclude('iframe')
       .analyze();
 
     // Surface violations even when the test passes — helpful in CI logs.
